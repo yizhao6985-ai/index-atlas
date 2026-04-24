@@ -1,0 +1,18 @@
+[project]
+name = "index-atlas-worker"
+version = "0.1.0"
+description = "Tushare ingest + APScheduler worker"
+readme = "README.md"
+# 与 Dockerfile 一致；排除 3.13：部分环境下 psycopg 二进制首包导入易卡住（勿在首启时反复 Ctrl+C）
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "tushare>=1.4.0",
+    "psycopg[binary]>=3.1.0",
+    "python-dotenv>=1.0.0",
+    "APScheduler>=3.10.0",
+    "chinese-calendar>=1.8.0",
+    "requests>=2.31.0",
+]
+
+[tool.uv]
+package = false

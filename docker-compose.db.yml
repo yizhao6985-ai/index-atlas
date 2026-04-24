@@ -1,0 +1,27 @@
+# 仅启动 PostgreSQL（本地开发时 api / web / worker 在宿主机运行）
+# 用法：docker compose -f docker-compose.db.yml up -d
+# 连接串：postgresql://postgres:postgres@localhost:5432/index_atlas
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: index_atlas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+      - ./db/migrations/002_quotes_snapshot_trade_date_unique.sql:/docker-entrypoint-initdb.d/002_quotes_snapshot_trade_date_unique.sql:ro
+      - ./db/migrations/003_quotes_split_snapshot_to_daily_rt.sql:/docker-entrypoint-initdb.d/003_quotes_split_snapshot_to_daily_rt.sql:ro
+      - ./db/migrations/004_market_constituent_rollups.sql:/docker-entrypoint-initdb.d/004_market_constituent_rollups.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d index_atlas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

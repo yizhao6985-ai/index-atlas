@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  html,
+  body {
+    @apply m-0 box-border h-full min-h-svh min-w-0 w-full;
+  }
+  #root {
+    @apply m-0 box-border flex h-full min-h-svh min-w-0 w-full flex-col;
+  }
+  body {
+    @apply antialiased;
+  }
+}

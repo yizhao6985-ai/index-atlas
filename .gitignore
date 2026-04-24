@@ -1,0 +1,12 @@
+node_modules
+dist
+.venv
+worker/.venv
+.env
+worker/.env
+*.log
+.DS_Store
+
+.vscode
+.cursor
+.mypy_cache
