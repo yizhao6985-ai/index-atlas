@@ -3,7 +3,11 @@ dist
 .venv
 worker/.venv
 .env
+!.env.example
 worker/.env
+!worker/.env.example
+api/.env
+!api/.env.example
 *.log
 .DS_Store
 
