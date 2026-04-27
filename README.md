@@ -1,6 +1,6 @@
 # A 股指数成分股 Treemap
 
-学习演示项目：申万 **L1→L2→L3→股** 热力图，面积支持 **流通市值 / 成交额**，涨跌按离散档位配色。数据经 **Tushare** 入库（`TUSHARE_TOKEN` **仅**配置在 `worker/.env`）。
+学习演示项目：申万 **L1→L2→L3→股** 热力图，面积支持 **流通市值 / 成交额**，涨跌按离散档位配色。数据经 **Tushare** 入库；**`TUSHARE_TOKEN` 与数据库连接等**均在仓库根目录 `.env` 配置（见 [`.env.example`](.env.example)）。
 
 ## 组件
 
@@ -41,23 +41,23 @@ BFF 在 [api/src/openapi-spec/setup.ts](api/src/openapi-spec/setup.ts) 内用 **
   ```bash
    docker compose -f docker-compose.db.yml up -d
   ```
-   首次启动会在空数据目录上自动执行 [db/migrations](db/migrations) 下全部 `.sql`（按文件名排序）。连接串：`postgresql://postgres:postgres@localhost:5432/index_atlas`（与 `[api/.env.example](api/.env.example)` 一致）。停止：`docker compose -f docker-compose.db.yml down`（数据在卷 `pgdata` 中；需清空可加 `-v`）。
+   首次启动会在空数据目录上自动执行 [db/migrations](db/migrations) 下全部 `.sql`（按文件名排序）。连接串：`postgresql://postgres:postgres@localhost:5432/index_atlas`（与根目录 [`.env.example`](.env.example) 中 `DATABASE_URL` 一致）。停止：`docker compose -f docker-compose.db.yml down`（数据在卷 `pgdata` 中；需清空可加 `-v`）。本地跑 api/worker 时可在根目录 `cp .env.example .env` 后填同一连接串。
    若不用 Docker，可自行安装 PostgreSQL 并手动执行同一 SQL。
-2. **Worker**：安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后：
+2. **环境变量**：在**仓库根目录**执行 `cp .env.example .env`，填写 `TUSHARE_TOKEN`、`DATABASE_URL`（及按需调整 API 端口等）。
+3. **Worker**：安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后：
   ```bash
-   cd worker && cp .env.example .env
-   # 编辑 .env：TUSHARE_TOKEN、DATABASE_URL
+   cd worker
    uv sync && uv run python -m app.main
   ```
    详见 `[worker/README.md](worker/README.md)`。
-3. API：`cd api && npm install && DATABASE_URL=... npm run dev`。
-4. 前端：`cd web && npm install && npm run dev`（Vite 将 `/api` 代理到 `http://127.0.0.1:3001`）。若需更新前端的 `gen:api` 产物，在 BFF 已起时于 `web/` 下执行 `npm run gen:api`。
+4. API：`cd api && npm install && npm run dev`（从根目录 `.env` 读取配置）。
+5. 前端：`cd web && npm install && npm run dev`（Vite 将 `/api` 代理到 `http://127.0.0.1:3001`）。若需更新前端的 `gen:api` 产物，在 BFF 已起时于 `web/` 下执行 `npm run gen:api`。
 
 生产构建的 Web 通过 Nginx 反代 `/api`，无需设置 `VITE_API_BASE`。
 
 ## Docker Compose
 
-在项目根目录创建 `.env`（可参考 `.env.example`），设置 `TUSHARE_TOKEN`。
+在项目根目录创建 `.env`（复制 `.env.example`），至少设置 `TUSHARE_TOKEN`；`api` / `worker` 服务会通过 `env_file` 读入该文件，compose 内仍会覆盖 `DATABASE_URL` 指向 `db` 容器。
 
 ```bash
 docker compose up --build

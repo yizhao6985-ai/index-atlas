@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import logging
-import time
 from decimal import Decimal
 
 from psycopg.rows import dict_row
@@ -24,7 +23,6 @@ from app.sync_common import (
 )
 from app.trading import today_trade_date
 from app.tushare_client import (
-    INDEX_MEMBER_ALL_MIN_INTERVAL_SEC,
     index_member_all_fetch_one,
     is_tushare_permission_error,
     is_tushare_rate_limit_error,
@@ -286,11 +284,8 @@ def sync_index_member_all(codes: list[str] | None = None) -> None:
         codes = sorted(set(codes))
     n = len(codes)
     log.info(
-        "index_member_all(doc 335): %s 只股票，间隔 %.1fs，约 %.1f 小时（"
-        "积分档低时该接口常为 1 次/分钟，可调 INDEX_MEMBER_ALL_MIN_INTERVAL_SEC）",
+        "index_member_all(doc 335): %s 只股票（请求连续发出；若遇限流将按接口提示等待后重试）",
         n,
-        INDEX_MEMBER_ALL_MIN_INTERVAL_SEC,
-        (n * INDEX_MEMBER_ALL_MIN_INTERVAL_SEC) / 3600,
     )
     api_hits = 0
     with connect() as conn:
@@ -336,8 +331,6 @@ def sync_index_member_all(codes: list[str] | None = None) -> None:
                         """,
                         (row_code, name, l1c, l1n, l2c, l2n, l3c, l3n),
                     )
-            if i < n:
-                time.sleep(INDEX_MEMBER_ALL_MIN_INTERVAL_SEC)
     log.info("index_member_all done: non-empty responses=%s / %s requests", api_hits, n)
 
 

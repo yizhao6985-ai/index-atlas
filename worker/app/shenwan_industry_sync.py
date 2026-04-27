@@ -29,7 +29,6 @@ DEFAULT_SW_SRC = os.environ.get("SHENWAN_CLASSIFY_SRC", "SW2021").strip() or "SW
 # L1：按一级行业拉成分（请求少）；L3：按三级行业拉（请求多，与 doc 335 示例一致）
 MEMBER_QUERY_LEVEL = os.environ.get("SHENWAN_MEMBER_QUERY_LEVEL", "L1").strip().upper() or "L1"
 # 按 l1/l2/l3 批量拉 index_member_all 时，分类之间的休眠（秒）。高积分档可 200 次/分钟量级 → 默认 0.3s。
-# 与逐股 sync_index_member_all 的 INDEX_MEMBER_ALL_MIN_INTERVAL_SEC（默认 65s）无关。
 
 
 def _shenwan_category_interval_sec() -> float:

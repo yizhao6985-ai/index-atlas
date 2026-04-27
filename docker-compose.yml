@@ -20,6 +20,8 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/index_atlas
       PORT: "3001"
@@ -34,6 +36,8 @@ services:
     build:
       context: .
       dockerfile: worker/Dockerfile
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/index_atlas
       TUSHARE_TOKEN: ${TUSHARE_TOKEN:-}

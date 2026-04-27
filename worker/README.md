@@ -16,20 +16,20 @@ uv python install 3.11
 2. **手动灌库**（与自动灌库等价，便于排查）：
 
 ```bash
+# 在仓库根目录：cp .env.example .env，填写 TUSHARE_TOKEN、DATABASE_URL（与 API 同一库）
 cd worker
-cp .env.example .env   # 填写 TUSHARE_TOKEN、DATABASE_URL（与 API 同一库）
 uv sync
 uv run python scripts/bootstrap_local_data.py
 ```
 
-再启动 worker（定时任务仅 **16:15** 收盘同步；若灌库失败或仍缺成分/行情且 `WORKER_REQUIRE_DATA_CHECK=1`，进程会退出）：
+再启动 worker（定时任务仅 **16:15** 收盘同步；若灌库失败或仍缺成分/行情，进程会退出，除非设 `WORKER_ALLOW_EMPTY_DB=1`）：
 
 ```bash
 uv run python -m app.main
 ```
 
 - 关闭启动时按需灌库：`WORKER_AUTO_BOOTSTRAP=0`（空库请事先手动跑 `bootstrap_local_data.py`）。
-- 空库也要起 worker 且不强制有数据（不推荐）：`WORKER_REQUIRE_DATA_CHECK=0`。
+- 空库或灌库失败仍要起进程（不推荐）：`WORKER_ALLOW_EMPTY_DB=1`。
 
 启动 **API** 前库中也须有成分与行情，否则进程退出；仅调试可设 `BFF_SKIP_DATA_CHECK=1`。
 

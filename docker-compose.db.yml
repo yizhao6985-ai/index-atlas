@@ -1,6 +1,7 @@
 # 仅启动 PostgreSQL（本地开发时 api / web / worker 在宿主机运行）
 # 用法：docker compose -f docker-compose.db.yml up -d
 # 连接串：postgresql://postgres:postgres@localhost:5432/index_atlas
+# 宿主机上的 api/worker 请在仓库根目录配置 `.env`（见根目录 `.env.example`）。
 #
 # 首次初始化时，会按文件名顺序执行 db/migrations/*.sql（与全栈 compose 的 db 一致）。
 # 若需重跑迁移，请 down -v 清空卷或手动在已有库执行 SQL。

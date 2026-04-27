@@ -1,14 +1,14 @@
 /**
- * 运行时配置：从 `api/.env` 加载环境变量并导出常用常量。
+ * 运行时配置：从仓库根目录 `.env` 加载环境变量并导出常用常量。
  * 其它模块应通过本文件读取配置，避免散落 `process.env`。
  */
 import { config as loadEnv } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** `api/` 包根目录（含 `.env`） */
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-loadEnv({ path: join(apiRoot, ".env") });
+const repoRoot = join(apiRoot, "..");
+loadEnv({ path: join(repoRoot, ".env") });
 
 /** HTTP 监听端口，默认 3001（与前端 dev proxy / docker 约定一致时可改） */
 export const PORT = Number(process.env.PORT ?? 3001);

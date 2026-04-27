@@ -84,12 +84,12 @@ def main() -> None:
     else:
         log.info("WORKER_AUTO_BOOTSTRAP=0：启动时不做灌库检查与请求（WORKER_STARTUP_FULL_PREPARE 亦为 0）")
 
-    if settings.require_data_on_start:
-        require_treemap_data_or_exit()
-    else:
+    if settings.allow_empty_db:
         log.warning(
-            "WORKER_REQUIRE_DATA_CHECK 已关闭：不强制要求已有成分与行情，定时任务仍会请求 Tushare"
+            "WORKER_ALLOW_EMPTY_DB=1：跳过库内成分/行情校验，定时任务仍会请求 Tushare（勿用于生产）"
         )
+    else:
+        require_treemap_data_or_exit()
 
     sched = BlockingScheduler(timezone="Asia/Shanghai")
     if settings.rt_k_interval_sec > 0:

@@ -1,8 +1,11 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv()
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(_REPO_ROOT / ".env")
 
 
 def _env_int(key: str, default: int) -> int:
@@ -28,12 +31,12 @@ class Settings:
     database_url: str
     # RT_K_INTERVAL_SEC：相邻两轮 rt_k 开始时刻的目标间隔（秒）；一轮内耗时从该间隔内扣除，0=关闭
     rt_k_interval_sec: int = 10
-    # WORKER_REQUIRE_DATA_CHECK：启动前要求库内已有成分与行情，默认开
-    require_data_on_start: bool = True
     # WORKER_STARTUP_FULL_PREPARE：每次启动都全量灌库（强制打 Tushare）；默认关，避免数据已齐仍重复请求
     startup_full_prepare: bool = False
     # WORKER_AUTO_BOOTSTRAP：启动时检查数据快照，仅在有缺失时灌库（与 bootstrap_gap_reasons 一致），默认开
     auto_bootstrap: bool = True
+    # WORKER_ALLOW_EMPTY_DB：跳过启动结束时的成分+行情校验（仅调试；默认可在灌库失败后仍退出）
+    allow_empty_db: bool = False
     # daily(doc 27)：表中保留的「交易日」种类上限（distinct trade_date），超出则删更旧日期
     quotes_daily_retention_trade_days: int = 30
     # 初始化灌库时回填的交易日数量（有数据的交易日计 success，会多扫若干工作日以跳过节假日空窗）
@@ -63,9 +66,9 @@ def get_settings() -> Settings:
         tushare_token=token,
         database_url=db,
         rt_k_interval_sec=_env_int("RT_K_INTERVAL_SEC", 10),
-        require_data_on_start=_env_bool("WORKER_REQUIRE_DATA_CHECK", True),
         startup_full_prepare=_env_bool("WORKER_STARTUP_FULL_PREPARE", False),
         auto_bootstrap=_env_bool("WORKER_AUTO_BOOTSTRAP", True),
+        allow_empty_db=_env_bool("WORKER_ALLOW_EMPTY_DB", False),
         quotes_daily_retention_trade_days=max(1, _env_int("QUOTES_DAILY_RETENTION_TRADE_DAYS", 30)),
         quotes_daily_bootstrap_trade_days=max(1, _env_int("QUOTES_DAILY_BOOTSTRAP_TRADE_DAYS", 30)),
         quotes_daily_full_market=_env_bool("QUOTES_DAILY_FULL_MARKET", True),

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 
 import tushare as ts
@@ -12,10 +11,7 @@ from app.config import settings
 
 log = logging.getLogger(__name__)
 
-# index_member_all(doc 335)：低档积分常为「每分钟 1 次」，须 ≥60s 间隔；见 doc 108
-INDEX_MEMBER_ALL_MIN_INTERVAL_SEC = float(
-    os.environ.get("INDEX_MEMBER_ALL_MIN_INTERVAL_SEC", "65")
-)
+
 def tushare_pro():
     return ts.pro_api(settings.tushare_token, timeout=60)
 

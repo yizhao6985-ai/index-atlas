@@ -4,10 +4,9 @@ dist
 worker/.venv
 .env
 !.env.example
+# 若误在子目录放置 .env，勿提交（运行时只读仓库根 `.env`）
 worker/.env
-!worker/.env.example
 api/.env
-!api/.env.example
 *.log
 .DS_Store
 
