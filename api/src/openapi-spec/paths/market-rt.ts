@@ -12,9 +12,9 @@ export function registerMarketSnapshotRtPath(
     method: "get",
     path: "/api/indices/{code}/market/rt",
     operationId: "getMarketSnapshotRt",
-    summary: "指定指数成分行情（仅实时 quotes_rt）",
+    summary: "指定指数成分行情（实时：rt 优先，否则当日 daily）",
     description:
-      "与 `/market` 返回体结构相同，但只使用 `quotes_rt` 中最新一条，不回退 `quotes_daily`。非交易/未入库实时时行可能减少或为空。",
+      "与 `/market` 的 live 一致：优先 `quotes_rt` 最新一行；晚盘清空 `quotes_rt` 后回退为 `quotes_daily` 当日收盘。返回体结构同 getMarketSnapshot。",
     tags: ["Market"],
     request: {
       params: zod.object({

@@ -31,7 +31,7 @@ export default function AppLayout() {
         marketDataUpdatedAt={marketQuery.dataUpdatedAt}
         marketRows={marketQuery.data?.rows}
       />
-      <main className="m-0 flex min-h-0 w-full max-w-none flex-1 flex-col overflow-x-hidden p-0 max-sm:pt-[calc(env(safe-area-inset-top,0px)+3.25rem)]">
+      <main className="m-0 flex min-h-0 w-full max-w-none flex-1 flex-col overflow-x-hidden p-0 max-sm:pt-[calc(env(safe-area-inset-top,0px)+var(--app-mobile-header-bar-h))]">
         <MarketTreemapView />
       </main>
     </div>

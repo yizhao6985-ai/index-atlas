@@ -42,7 +42,7 @@ uv run python -m app.main
 - 若无 `**daily_basic`** 权限：`circ_mv` 可能为空，热力图请用 **「成交额」** 作面积。
 - **行情表拆分**：`**quotes_daily`** 存 Tushare **daily（doc 27）** 历史日线，供 API `?tradeDate=` 与保留窗口裁剪；`**quotes_rt`** 存 **rt_k（doc 372）** 盘中实时快照。BFF 默认大盘接口优先读 `quotes_rt`，无则回退 `quotes_daily` 最新收盘。
 - `**bootstrap_local_data.py`**：手动全量初始化，逻辑与 worker 启动准备一致。
-- **盘中**：默认 `**RT_K_INTERVAL_SEC=10**` 注册间隔任务；**仅**在 `is_trading_session()`（工作日 9:30–11:30、13:00–15:00）内才会真正请求 **rt_k** 并写 `quotes_rt`，其余时间函数立即返回（低档积分请设 `0` 关闭轮询）。
+- **盘中**：默认 `**RT_K_INTERVAL_SEC=10**`：后台线程使**相邻两轮 `job_rt_k` 开始**约隔该秒数；本轮请求+写库耗时从间隔中扣除，仅 **sleep 剩余时间**，避免「写完库再固定多等 10s」拉长周期。**仅**在 `is_trading_session()`（工作日 9:30–11:30、13:00–15:00）内才会真正请求 **rt_k**，其余时间 `job_rt_k` 立即返回（低档积分请设 `0` 关闭轮询）。
 - **收盘**：工作日 **16:15** 任务：`index_weight` → 申万 → `daily_basic`（流通股本）→ **daily** 更新 `quotes_daily` 并裁剪约 30 交易日 → `**TRUNCATE quotes_rt`**（日线已落库，清空实时表）。
 - 申万默认 `SHENWAN_MEMBER_QUERY_LEVEL=L1`，`SHENWAN_MEMBER_INTERVAL_SEC=0.3`。旧库若仍有 `quotes_snapshot`，执行 `db/migrations/003_quotes_split_snapshot_to_daily_rt.sql`（必要时先 `002`）。
 

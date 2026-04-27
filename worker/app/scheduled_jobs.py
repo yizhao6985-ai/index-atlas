@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def job_rt_k() -> None:
-    """定时器仍会按间隔触发；仅交易时段内才请求 Tushare（见 trading.is_trading_session）。"""
+    """由 main 中轮询线程调用；线程按「轮开始 → 轮开始」间隔补足 sleep。仅交易时段内才请求 Tushare（见 trading.is_trading_session）。"""
     if not is_trading_session():
         return
     log.info("rt_k：当前为交易时段，拉取 rt_k(doc 372) → quotes_rt")

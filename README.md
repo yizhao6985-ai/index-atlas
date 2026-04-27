@@ -5,24 +5,24 @@
 ## 组件
 
 
-| 目录              | 说明                                                                                       |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| `db/migrations` | PostgreSQL 初始化 SQL                                                                       |
-| `worker`        | Python 3.11 采集；依赖由 **[uv](https://docs.astral.sh/uv/)** 管理（`pyproject.toml` / `uv.lock`） |
-| `api`           | Node 20 + Express BFF，`/api/indices`、`/api/indices/:code/market`（原始成分行情；热力图由前端聚合）        |
-| `web`           | React 18 + Vite + Tailwind CSS + TanStack Query + ECharts                                |
-| `api/src/openapi-spec/` + `api/src/openapi.ts` | OpenAPI：Zod 契约在 **`openapi-spec/`** 分文件维护，入口 `openapi.ts` 导出 `getOpenApiDocument` 与业务类型；`GET /api/openapi.json` |
+| 目录                                             | 说明                                                                                                              |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `db/migrations`                                | PostgreSQL 初始化 SQL                                                                                              |
+| `worker`                                       | Python 3.11 采集；依赖由 **[uv](https://docs.astral.sh/uv/)** 管理（`pyproject.toml` / `uv.lock`）                        |
+| `api`                                          | Node 20 + Express BFF，`/api/indices`、`/api/indices/:code/market`（原始成分行情；热力图由前端聚合）                               |
+| `web`                                          | React 18 + Vite + Tailwind CSS + TanStack Query + ECharts                                                       |
+| `api/src/openapi-spec/` + `api/src/openapi.ts` | OpenAPI：Zod 契约在 `**openapi-spec/`** 分文件维护，入口 `openapi.ts` 导出 `getOpenApiDocument` 与业务类型；`GET /api/openapi.json` |
 
 
 - **时间窗与预计算（`market`）**
   - `GET /api/indices/{code}/market?window=1d|7d|30d`：读表 `market_constituent_rollups`（1/7/30 **交易日** 窗，由 [worker 晚盘/灌库](worker/app/scheduled_jobs.py) 在 `quotes_daily` 更新后重算，避免每次请求在线聚合；`1d` 无预计算行时回退为旧版「rt ∪ daily 最新」查询。
   - `GET /api/indices/{code}/market?tradeDate=YYYY-MM-DD`：单日历史，仍只读 `quotes_daily`（**忽略** `window`）。
-  - `GET /api/indices/{code}/market/rt`：仅 `quotes_rt` 最新行，**结构同**上，用于盘中「实时」。
-  - 新库/升级请按序执行 [db/migrations](db/migrations)（当前为 `001`→`002`→`003`→`004_market_constituent_rollups`）；`docker compose -f docker-compose.db.yml` 的 init 卷会按文件名顺序挂载全部脚本；已有库可单独执行 `004`。
+  - `GET /api/indices/{code}/market/rt`：与「rt ∪ daily 最新」一致（**结构同** `market` live）；盘中用 `quotes_rt`，晚盘 `quotes_rt` 清空后走 `quotes_daily` 当日。
+  - 新库/升级请按序执行 [db/migrations](db/migrations)（`001`…`006` 等，见目录内文件名）；`docker compose` 的 `db` 服务将 `db/migrations` 挂载到 `docker-entrypoint-initdb.d`，**仅在新数据目录首次初始化**时按文件名顺序执行其中全部 `.sql`；已有库请按需手动执行尚未应用的脚本。
 
 ### OpenAPI → 前端代码生成
 
-- **契约源（手写）**：[api/src/openapi-spec/](api/src/openapi-spec/) 下分 schema / paths 等，入口 [api/src/openapi.ts](api/src/openapi.ts)；路由实现见 [api/src/routes/](api/src/routes/)。改接口后于 `**web/**` 执行 `**npm run gen:api**` 更新 [web/src/api/generated](web/src/api/generated)（BFF 已起、可拉 `/api/openapi.json`）。改接口时改 Zod 与 `register*Path`、及对应 handler。
+- **契约源（手写）**：[api/src/openapi-spec/](api/src/openapi-spec/) 下分 schema / paths 等，入口 [api/src/openapi.ts](api/src/openapi.ts)；路由实现见 [api/src/routes/](api/src/routes/)。改接口后于 `**web/`** 执行 `**npm run gen:api`** 更新 [web/src/api/generated](web/src/api/generated)（BFF 已起、可拉 `/api/openapi.json`）。改接口时改 Zod 与 `register*Path`、及对应 handler。
 - **BFF 暴露**（与运行中的实现一致）：
   - `GET /api/openapi.json`
   - `GET /api/docs`（Swagger UI）
@@ -33,7 +33,7 @@
 ### 后端（Node）返回类型
 
 BFF 在 [api/src/openapi-spec/setup.ts](api/src/openapi-spec/setup.ts) 内用 **Zod `z.infer<typeof …Schema>`** 经 [api/src/openapi.ts](api/src/openapi.ts) 再导出 `IndicesResponse`、`MarketSnapshotResponse` 等，**与 OpenAPI 文档同源**，无需在 `api` 下再跑 codegen。  
-**生成客户端与前端类型**只在 `**web/**` 下执行 `**npm run gen:api**`（需 BFF 已起，见上）。
+**生成客户端与前端类型**只在 `**web/`** 下执行 `**npm run gen:api`**（需 BFF 已起，见上）。
 
 ## 本地开发
 
@@ -41,7 +41,7 @@ BFF 在 [api/src/openapi-spec/setup.ts](api/src/openapi-spec/setup.ts) 内用 **
   ```bash
    docker compose -f docker-compose.db.yml up -d
   ```
-   首次启动会自动执行 `[db/migrations/001_init.sql](db/migrations/001_init.sql)`。连接串：`postgresql://postgres:postgres@localhost:5432/index_atlas`（与 `[api/.env.example](api/.env.example)` 一致）。停止：`docker compose -f docker-compose.db.yml down`（数据在卷 `pgdata` 中；需清空可加 `-v`）。
+   首次启动会在空数据目录上自动执行 [db/migrations](db/migrations) 下全部 `.sql`（按文件名排序）。连接串：`postgresql://postgres:postgres@localhost:5432/index_atlas`（与 `[api/.env.example](api/.env.example)` 一致）。停止：`docker compose -f docker-compose.db.yml down`（数据在卷 `pgdata` 中；需清空可加 `-v`）。
    若不用 Docker，可自行安装 PostgreSQL 并手动执行同一 SQL。
 2. **Worker**：安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后：
   ```bash

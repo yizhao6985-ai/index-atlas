@@ -1,7 +1,7 @@
 """
 预计算 market 时间窗（1d / 7d / 30d 交易日）成分行，写入 market_constituent_rollups。
 
-由晚盘与灌库在 quotes_daily 更新后执行；BFF 只读本表。实时盘中行情见单独 /market/rt 接口，仅用 quotes_rt。
+由晚盘与灌库在 quotes_daily 更新后执行；BFF 只读本表。/market/rt 在盘中有 quotes_rt 用 rt，清库后用 quotes_daily。
 """
 
 from __future__ import annotations

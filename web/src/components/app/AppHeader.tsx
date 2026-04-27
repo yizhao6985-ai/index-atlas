@@ -1,5 +1,5 @@
 import { CloseOutlined, LoadingOutlined, MenuOutlined } from "@ant-design/icons";
-import { Button, Col, Popover, Radio, Row, Select, Space, Tag, Tooltip } from "antd";
+import { Button, Col, Popover, Radio, Row, Select, Space, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MarketStatsCharts from "@/components/MarketStatsCharts";
@@ -13,9 +13,9 @@ import {
 import type { ConstituentQuoteRow, IndicesResponse } from "@/api/generated/types.gen";
 
 const METRIC_OPTIONS: readonly (readonly [Metric, string])[] = [
-  ["weight", "成分权重"],
-  ["turnover", "成交额"],
   ["mcap", "流通市值"],
+  ["turnover", "成交额"],
+  ["weight", "成分权重"],
 ] as const;
 
 const MOBILE_DISCLAIMER =
@@ -255,34 +255,31 @@ export default function AppHeader({
   );
 
   const marketStatsRow = hasRows ? (
-    <Row
-      gutter={[10, 0]}
-      align="middle"
-      wrap={false}
-      className="!w-max max-w-none !flex-nowrap rounded-md border border-slate-100 bg-slate-50/90 px-2.5 py-1.5 text-[11px] leading-none text-slate-600 ring-1 ring-slate-900/[0.04]"
+    <div
+      className="flex w-max max-w-none flex-nowrap items-center gap-x-2.5 rounded-md border border-slate-100 bg-slate-50/90 px-2.5 py-1.5 text-[11px] leading-none text-slate-600 ring-1 ring-slate-900/[0.04] sm:gap-x-3"
     >
-      <Col flex="none" className="whitespace-nowrap">
+      <span className="shrink-0 whitespace-nowrap">
         成分 <strong className="tabular-nums text-slate-900">{summary.count}</strong> 只
-      </Col>
-      <Col flex="none" className="whitespace-nowrap">
+      </span>
+      <span className="shrink-0 whitespace-nowrap">
         流通市值（约）{" "}
         <strong className="tabular-nums text-slate-900">
           {fmtNum(totalCircMvToTrillionYuan(summary.totalCircMvWan), 2)}
         </strong>{" "}
         万亿
-      </Col>
-      <Col flex="none" className="whitespace-nowrap">
+      </span>
+      <span className="shrink-0 whitespace-nowrap">
         成交额（约）{" "}
         <strong className="tabular-nums text-slate-900">
           {fmtNum(totalAmountToYiYuan(summary.totalAmountQian), 2)}
         </strong>{" "}
         亿
-      </Col>
-      <Col flex="none" className="whitespace-nowrap">
+      </span>
+      <span className="shrink-0 whitespace-nowrap">
         等权 <strong className="tabular-nums text-slate-900">{fmtPct(summary.avgPct)}</strong>
-      </Col>
-      <Col flex="none" className="whitespace-nowrap">
-        <span className="inline-flex items-center gap-0.5">
+      </span>
+      <span className="inline-flex shrink-0 flex-nowrap items-center gap-x-2 sm:gap-x-2.5">
+        <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap">
           涨{" "}
           <strong className="tabular-nums text-red-600 leading-none">{summary.riseCount}</strong>
           <span className="text-slate-400">/</span>
@@ -292,8 +289,6 @@ export default function AppHeader({
           平{" "}
           <strong className="tabular-nums text-slate-800 leading-none">{summary.flatCount}</strong>
         </span>
-      </Col>
-      <Col flex="none" className="flex items-center">
         <Popover
           content={statsChartsPopover}
           trigger={["hover", "click"]}
@@ -310,13 +305,13 @@ export default function AppHeader({
         >
           <button
             type="button"
-            className="min-h-10 min-w-[2.75rem] cursor-pointer touch-manipulation border-0 bg-transparent p-0 text-left text-[10px] font-medium text-[#1e293b] underline decoration-dotted underline-offset-2 sm:min-h-0 sm:min-w-0 sm:text-[11px] hover:text-slate-900 active:opacity-80"
+            className="min-h-10 shrink-0 cursor-pointer touch-manipulation border-0 bg-transparent p-0 text-left text-[10px] font-medium whitespace-nowrap text-[#1e293b] underline decoration-dotted underline-offset-2 sm:min-h-0 sm:text-[11px] hover:text-slate-900 active:opacity-80"
           >
             涨跌统计
           </button>
         </Popover>
-      </Col>
-    </Row>
+      </span>
+    </div>
   ) : null;
 
   const marketStatsRowMobile = hasRows ? (
@@ -353,29 +348,21 @@ export default function AppHeader({
 
   const legendBlock = (
     <div
-      className="flex min-w-0 max-w-full flex-nowrap items-center gap-2 overflow-x-auto sm:gap-2.5"
-      aria-label="涨跌图例，点按或悬停查看涨跌幅分档"
+      className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:gap-2.5"
+      aria-label="涨跌图例：色块内为涨跌幅分档（%）"
     >
       <div className="inline-flex h-5 shrink-0 items-center rounded-md bg-[#1e293b] px-1.5 text-[10px] font-medium leading-none text-white shadow-sm ring-1 ring-slate-900/20">
         当日涨跌幅
       </div>
-      <div className="inline-flex min-w-0 flex-nowrap items-center gap-1.5">
+      <div className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
         {LEGEND_BUCKETS.map((b) => (
-          <Tooltip
+          <span
             key={b.key}
-            placement="top"
-            mouseEnterDelay={0.05}
-            trigger={["hover", "click"]}
-            color="#1e293b"
-            title={
-              b.key === "na" ? "无涨跌幅或无法计算" : `涨跌幅分档：${b.label}（%）`
-            }
+            className="inline-flex min-h-5 shrink-0 items-center justify-center rounded-sm border border-slate-900/25 px-1 py-0.5 text-center text-[8px] font-semibold leading-tight text-white shadow-sm [text-shadow:0_0_2px_rgb(0_0_0/0.75),0_1px_2px_rgb(0_0_0/0.55)] sm:px-1.5 sm:text-[10px]"
+            style={{ background: b.color }}
           >
-            <span
-              className="inline-block h-5 w-7 shrink-0 cursor-default rounded-sm border border-slate-900/25 shadow-sm"
-              style={{ background: b.color }}
-            />
-          </Tooltip>
+            {b.label}
+          </span>
         ))}
       </div>
     </div>
@@ -388,7 +375,7 @@ export default function AppHeader({
         className="pointer-events-none fixed left-0 right-0 top-0 z-40 sm:hidden"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
-        <div className="pointer-events-auto flex items-center justify-between border-b border-slate-200/50 bg-slate-900/45 px-3 py-2 shadow-sm backdrop-blur-md">
+        <div className="pointer-events-auto box-border flex h-[var(--app-mobile-header-bar-h)] items-center justify-between border-b border-slate-200/50 bg-slate-900/45 px-3 shadow-sm backdrop-blur-md">
           <span className="text-sm font-semibold text-white drop-shadow-sm">A 股指数云图</span>
           <Button
             type="primary"
@@ -455,13 +442,13 @@ export default function AppHeader({
 
         <div className="mt-2.5 flex flex-col gap-2">
           {tagsAndStatusRow}
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2">
             {hasRows ? (
-              <div className="flex min-w-0 max-w-full shrink-0 items-center overflow-x-auto">
-                {marketStatsRow}
-              </div>
+              <div className="flex shrink-0 items-center">{marketStatsRow}</div>
             ) : null}
-            <div className="flex min-w-0 flex-1 items-center justify-end">{legendBlock}</div>
+            <div className="flex min-w-0 flex-1 items-center justify-start sm:justify-end">
+              {legendBlock}
+            </div>
           </div>
         </div>
       </header>

@@ -59,11 +59,11 @@ export type ConstituentQuoteRow = {
      */
     name: string;
     /**
-     * 流通市值（元）：库内 circ_mv = 流通股本(万股)×10000×收盘价，非 Tushare daily_basic 的万元口径
+     * 流通市值（元）：库内为 float_share(万股)×10000×close，与 `quotes_daily`/`quotes_rt` 的 circ_mv 列一致，非 Tushare daily_basic 的万元口径
      */
     circMv: number | unknown;
     /**
-     * 成交额（千元）：Tushare daily 为千元；rt_k 入库时已由元/1000 与日线对齐
+     * 成交额（千元）：Tushare daily 为千元；`quotes_rt` 由 rt_k 的元/1000 与日线对齐，与库内 amount 一致
      */
     amount: number | unknown;
     /**

@@ -8,48 +8,6 @@ const SHENWAN_IN_SELECT = `
   s.sw_l3_name AS "swL3Name"
 `;
 
-/** 仅 quotes_rt，无 quotes_daily 回退（用于盘中实时专用接口） */
-export const MARKET_SQL_RT_ONLY = `
-WITH idx AS (
-  SELECT id, code FROM indices WHERE code = $1
-),
-const_date AS (
-  SELECT MAX(ic.trade_date) AS td
-  FROM index_constituents ic
-  JOIN idx ON ic.index_id = idx.id
-),
-const_rows AS (
-  SELECT ic.con_code, ic.weight
-  FROM index_constituents ic
-  JOIN idx ON ic.index_id = idx.id
-  JOIN const_date cd ON ic.trade_date = cd.td
-),
-q_rt AS (
-  SELECT DISTINCT ON (stock_code)
-    stock_code,
-    trade_date,
-    snapshot_at,
-    circ_mv,
-    amount,
-    pct_change
-  FROM quotes_rt
-  ORDER BY stock_code, trade_date DESC, snapshot_at DESC
-)
-SELECT
-  c.con_code AS "tsCode",
-  COALESCE(NULLIF(TRIM(s.name), ''), c.con_code) AS "name",
-  rt.circ_mv AS "circMv",
-  rt.amount AS "amount",
-  rt.pct_change AS "pctChange",
-  rt.snapshot_at AS "snapshotAt",
-  rt.trade_date AS "tradeDate",
-  c.weight AS "weight",
-  ${SHENWAN_IN_SELECT}
-FROM const_rows c
-LEFT JOIN stocks s ON s.ts_code = c.con_code
-INNER JOIN q_rt rt ON rt.stock_code = c.con_code
-`;
-
 /**
  * 时间窗预计算行（1d/7d/30d 交易日，见 market_constituent_rollups，由 worker 灌库/晚盘写）
  */

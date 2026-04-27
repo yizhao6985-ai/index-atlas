@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    /* 与 AppHeader 移动端 fixed 内层同高，供 main 上 padding 与顶栏对齐 */
+    --app-mobile-header-bar-h: 2.75rem;
+  }
   html {
     -webkit-text-size-adjust: 100%;
   }

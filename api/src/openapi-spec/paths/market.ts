@@ -16,7 +16,7 @@ export function registerMarketSnapshotPath(
     operationId: "getMarketSnapshot",
     summary: "指定指数大盘成分行情快照（原始行）",
     description:
-      "不传 `tradeDate` 时从预计算表 `market_constituent_rollups` 读 `window`（1d/7d/30d 交易日，由灌库/晚盘根据 quotes_daily 重算，避免每次请求在线聚合）。`1d` 为最近一交易日与当前成分；`7d`/`30d` 为窗内首尾收盘涨跌与成交额合。传 `tradeDate=YYYY-MM-DD` 时忽略 `window`，仅查该日 `quotes_daily` 且成分取最新批。`dataAsOf` / `tradeDate` 见行内元数据。",
+      "不传 `tradeDate` 时从预计算表 `market_constituent_rollups` 读 `window`（1d/7d/30d 交易日，由灌库/晚盘根据 quotes_daily 重算）。`1d` 为最近一交易日与当前成分；`7d`/`30d` 为窗内首尾收盘涨跌与成交额合。`1d` 且预计算无行时回退为 live（quotes_rt 优先、否则 quotes_daily 当日）。传 `tradeDate=YYYY-MM-DD` 时忽略 `window`，仅查该日 `quotes_daily` 且成分取最新批。",
     tags: ["Market"],
     request: {
       params: zod.object({

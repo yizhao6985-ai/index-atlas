@@ -26,7 +26,7 @@ def _env_bool(key: str, default: bool) -> bool:
 class Settings:
     tushare_token: str
     database_url: str
-    # RT_K_INTERVAL_SEC：盘中 rt_k(doc 372) 轮询秒数；0=关闭（低档积分易限流）
+    # RT_K_INTERVAL_SEC：相邻两轮 rt_k 开始时刻的目标间隔（秒）；一轮内耗时从该间隔内扣除，0=关闭
     rt_k_interval_sec: int = 10
     # WORKER_REQUIRE_DATA_CHECK：启动前要求库内已有成分与行情，默认开
     require_data_on_start: bool = True

@@ -1,5 +1,6 @@
 /**
- * 指数成分行情：历史日 / 时间窗预计算 / 仅实时 rt；热路径带短 TTL 内存缓存（非空时写入）。
+ * 指数成分行情：历史日 / 时间窗预计算 / 实时（rt 同路径）；热路径带短 TTL 内存缓存（非空时写入）。
+ * `/market/rt` 与 live 相同 SQL：优先 quotes_rt，晚盘 `quotes_rt` 清空后回退为 quotes_daily 当日。
  */
 import type pg from "pg";
 
@@ -12,7 +13,6 @@ import {
   MARKET_ROLLUP_SQL,
   MARKET_SQL_HISTORICAL,
   MARKET_SQL_LIVE,
-  MARKET_SQL_RT_ONLY,
 } from "../sql/market.js";
 
 type CacheEntry = { exp: number; body: MarketSnapshotResponse };
@@ -23,35 +23,6 @@ function optStr(v: unknown): string | null {
   if (v == null) return null;
   const t = String(v).trim();
   return t === "" ? null : t;
-}
-
-/**
- * `quotes_rt` 的 amount 在 worker 中应存「千元」= rt_k(元)/1000。
- * 历史或异常数据曾把 Tushare「元」原样当「千」写库，会放大 ~1000 倍、出现成交额>流通市值，甚至单日成交>全市值。
- * 在 circ_mv（元）可用时，若按「千」理解会使当日成交额(元) = amount*1000 相对于市值不合理，则把 amount 当作「元」并转为千元。
- */
-function normalizeRtAmountQian(
-  amountRaw: number,
-  circMvYuan: number | null,
-): number {
-  if (!Number.isFinite(amountRaw) || amountRaw < 0) {
-    return amountRaw;
-  }
-  const c =
-    circMvYuan != null && Number.isFinite(circMvYuan) && circMvYuan > 0
-      ? circMvYuan
-      : null;
-  const toQian = (yuan: number) => yuan / 1000;
-  if (c != null) {
-    const asTurnoverYuanIfQian = amountRaw * 1000;
-    if (asTurnoverYuanIfQian > 50 * c) {
-      return toQian(amountRaw);
-    }
-  }
-  if (amountRaw >= 5e7) {
-    return toQian(amountRaw);
-  }
-  return amountRaw;
 }
 
 function mapRow(row: Record<string, unknown>) {
@@ -76,22 +47,6 @@ function mapRow(row: Record<string, unknown>) {
     swL2Name: optStr(row.swL2Name),
     swL3Code: optStr(row.swL3Code),
     swL3Name: optStr(row.swL3Name),
-  };
-}
-
-function mapRowRt(row: Record<string, unknown>) {
-  const base = mapRow(row);
-  const circ = base.circMv;
-  const am = base.amount;
-  if (am == null) {
-    return base;
-  }
-  return {
-    ...base,
-    amount: normalizeRtAmountQian(
-      am,
-      circ != null && Number.isFinite(circ) ? circ : null,
-    ),
   };
 }
 
@@ -165,7 +120,7 @@ export async function getMarketSnapshot(
 }
 
 /**
- * 仅 `quotes_rt` 的最新一行 per 成分，结构同 getMarketSnapshot。
+ * 与 `getMarketSnapshot` 的 live（rt ∪ daily 最新）一致：盘中有 rt 用 rt，晚盘清库后仅有 daily 则用日线。
  */
 export async function getMarketSnapshotRt(
   pool: pg.Pool,
@@ -187,10 +142,8 @@ export async function getMarketSnapshotRt(
     return { kind: "not_found" };
   }
 
-  const r = await pool.query(MARKET_SQL_RT_ONLY, [code]);
-  const rows = r.rows.map((row) =>
-    mapRowRt(row as unknown as Record<string, unknown>),
-  );
+  const r = await pool.query(MARKET_SQL_LIVE, [code]);
+  const rows = r.rows.map((row) => mapRow(row as unknown as Record<string, unknown>));
   const meta = aggregateSnapshotMeta(
     r.rows as { snapshotAt?: Date; tradeDate?: Date }[],
   );

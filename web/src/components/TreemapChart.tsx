@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { colorForPctChange } from "@/lib/colors";
 import type { TreemapNode } from "@/lib/treemapBuilder";
 import { totalAmountToYiYuan } from "@/lib/marketStats";
+import { xueqiuStockUrl } from "@/lib/xueqiu";
 import { useEcharts } from "@/hooks/useEcharts";
 
 /** 流通市值：库内 `circ_mv` 为**元**（非万元）→ 亿元 */
@@ -42,6 +43,7 @@ function decorate(node: TreemapNode): Record<string, unknown> {
   if (node.children?.length) {
     return { ...base, children: node.children.map(decorate) };
   }
+  const xq = xueqiuStockUrl(node.tsCode);
   return {
     ...base,
     label: {
@@ -57,6 +59,7 @@ function decorate(node: TreemapNode): Record<string, unknown> {
     circMv: node.circMv,
     amount: node.amount,
     weight: node.weight,
+    ...(xq ? { link: xq, target: "blank" as const } : {}),
   };
 }
 
@@ -92,6 +95,7 @@ export default function TreemapChart({ root }: { root: TreemapNode }) {
             const circ = fmtCircMvYi(data?.circMv);
             const turnover = fmtAmountYi(data?.amount);
             const w = fmtConstituentWeight(data?.weight);
+            const xq = data?.tsCode ? xueqiuStockUrl(data.tsCode) : null;
             return [
               `${code}<b>${name}</b>`,
               `申万: ${swPath || "—"}`,
@@ -99,6 +103,11 @@ export default function TreemapChart({ root }: { root: TreemapNode }) {
               `流通市值: ${circ}`,
               `成交额: ${turnover}`,
               `成分权重: ${w}`,
+              ...(xq
+                ? [
+                    `<span style="opacity:.85;font-size:11px">点击方块跳转雪球</span>`,
+                  ]
+                : []),
             ].join("<br/>");
           }
           return `<b>${name}</b><br/>申万路径: ${swPath || name}<br/>加权涨跌幅: ${pctStr}<br/><span style="opacity:.85;font-size:12px">（块面积为下属子项加总，配色按加权限跌幅分档）</span>`;
@@ -112,7 +121,8 @@ export default function TreemapChart({ root }: { root: TreemapNode }) {
           width: "100%",
           height: "100%",
           roam: false,
-          nodeClick: false,
+          // 叶子节点 data 上带 `link` 时跳转雪球；无 link 的父级点击无动作
+          nodeClick: "link",
           breadcrumb: { show: false },
           // 有子级：顶栏行业名 — 与页面标题区一致，深底白字
           upperLabel: {

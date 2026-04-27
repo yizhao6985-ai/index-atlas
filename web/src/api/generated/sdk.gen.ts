@@ -50,8 +50,8 @@ export const getMarketSnapshot = <ThrowOnError extends boolean = false>(options:
 };
 
 /**
- * 指定指数成分行情（仅实时 quotes_rt）
- * 与 `/market` 返回体结构相同，但只使用 `quotes_rt` 中最新一条，不回退 `quotes_daily`。非交易/未入库实时时行可能减少或为空。
+ * 指定指数成分行情（实时：rt 优先，否则当日 daily）
+ * 与 `/market` 的 live 一致：优先 `quotes_rt` 最新一行；晚盘清空 `quotes_rt` 后回退为 `quotes_daily` 当日收盘。返回体结构同 getMarketSnapshot。
  */
 export const getMarketSnapshotRt = <ThrowOnError extends boolean = false>(options: Options<GetMarketSnapshotRtData, ThrowOnError>) => {
     return (options.client ?? _heyApiClient).get<GetMarketSnapshotRtResponse, GetMarketSnapshotRtError, ThrowOnError>({

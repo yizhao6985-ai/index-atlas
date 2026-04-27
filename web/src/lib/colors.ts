@@ -31,7 +31,7 @@ export function bucketKeyForPct(pct: number | null | undefined): string {
   return "up_extreme";
 }
 
-/** 图例、统计表用完整区间；具体比例见顶栏 hover */
+/** 图例、统计表用完整区间 */
 export const LEGEND_BUCKETS: { key: string; label: string; color: string }[] = [
   { key: "down_extreme", label: "≤ −8%", color: "#064e3b" },
   { key: "down_strong", label: "(−8, −5]", color: "#047857" },

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import sys
+import threading
+import time
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -14,17 +16,28 @@ from app.data_readiness import (
     require_treemap_data_or_exit,
 )
 from app.scheduled_jobs import job_evening, job_rt_k
-from app.trading import is_trading_session
-from app.tushare_sync import sync_rt_k_snapshot
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
     stream=sys.stdout,
 )
-# 避免非交易时段每 10s 一条「Running job job_rt_k / executed successfully」误导为在同步
+# 避免非交易时段一条「Running job … / executed successfully」误导为在同步
 logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
 log = logging.getLogger("worker")
+
+
+def _rt_k_poll_loop(interval_sec: int) -> None:
+    """相邻两轮 `job_rt_k` **开始**时刻目标间隔 `interval_sec` 秒。
+    一轮内请求+写库耗时计入该间隔；仅当耗时不足时才 sleep 补足，避免变成「写库后再多等满 interval」。"""
+    while True:
+        t0 = time.monotonic()
+        try:
+            job_rt_k()
+        except Exception:
+            log.exception("rt_k poll loop: job_rt_k failed")
+        elapsed = time.monotonic() - t0
+        time.sleep(max(0.0, float(interval_sec) - elapsed))
 
 
 def main() -> None:
@@ -78,31 +91,22 @@ def main() -> None:
             "WORKER_REQUIRE_DATA_CHECK 已关闭：不强制要求已有成分与行情，定时任务仍会请求 Tushare"
         )
 
-    if settings.rt_k_interval_sec > 0 and is_trading_session():
-        log.info("当前为交易时段，启动后立即执行一轮 rt_k")
-        try:
-            sync_rt_k_snapshot()
-        except Exception:
-            log.exception("启动时 rt_k 失败")
-    elif settings.rt_k_interval_sec == 0:
-        log.info("RT_K_INTERVAL_SEC=0：不轮询 rt_k，盘中无实时入库")
-
     sched = BlockingScheduler(timezone="Asia/Shanghai")
     if settings.rt_k_interval_sec > 0:
-        sched.add_job(
-            job_rt_k,
-            "interval",
-            seconds=settings.rt_k_interval_sec,
-            max_instances=1,
-            coalesce=True,
-        )
+        threading.Thread(
+            target=_rt_k_poll_loop,
+            args=(settings.rt_k_interval_sec,),
+            name="rt_k_poll",
+            daemon=True,
+        ).start()
         log.info(
-            "rt_k(doc 372) 已启用：交易时段每 %ss 一轮；收盘后由 16:15 任务写入 quotes_daily 并清空 quotes_rt",
+            "rt_k(doc 372) 已启用：相邻两轮开始目标间隔 %ss（含本轮请求与写库；不足则仅补足剩余休眠）"
+            "；仅交易时段内会请求 Tushare；收盘后由 16:15 任务写入 quotes_daily 并清空 quotes_rt",
             settings.rt_k_interval_sec,
         )
     else:
         log.info(
-            "rt_k 已关闭（RT_K_INTERVAL_SEC=0）。"
+            "RT_K_INTERVAL_SEC=0：不轮询 rt_k（盘中无实时入库）。"
             "低档积分易限流；收盘后仍由 16:15 任务更新 quotes_daily"
         )
     sched.add_job(
