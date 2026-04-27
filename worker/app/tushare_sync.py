@@ -14,7 +14,6 @@ from app.db import connect, exec_sql
 from app.sync_common import (
     calc_circ_mv,
     calc_pct,
-    chunks,
     ensure_stock_stub,
     fetch_constituent_union_codes,
     last_n_workdays_newest_first,
@@ -25,7 +24,6 @@ from app.sync_common import (
 )
 from app.trading import today_trade_date
 from app.tushare_client import (
-    BATCH_RT,
     INDEX_MEMBER_ALL_MIN_INTERVAL_SEC,
     index_member_all_fetch_one,
     is_tushare_permission_error,
@@ -344,7 +342,7 @@ def sync_index_member_all(codes: list[str] | None = None) -> None:
 
 
 def sync_rt_k_snapshot() -> None:
-    """rt_k（doc 372）按批拉实时行情 → quotes_rt。低档积分常限 1 次/分钟或/小时。"""
+    """rt_k（doc 372）单次逗号拼接成分并集 → quotes_rt。低档积分常限频。"""
     pro = tushare_pro()
     trade_d = today_trade_date()
     snapshot_at = datetime.datetime.now(datetime.timezone.utc)
@@ -357,42 +355,42 @@ def sync_rt_k_snapshot() -> None:
         return
 
     rows_out: list[tuple] = []
-    for chunk in chunks(codes, BATCH_RT):
-        joined = ",".join(chunk)
-        try:
-            df = retry_df(lambda: pro.rt_k(ts_code=joined))
-        except Exception as e:
-            if is_tushare_permission_error(e):
-                log.warning(
-                    "rt_k skipped: 无接口权限或积分不足 (doc 372)。"
-                    "见 https://tushare.pro/document/1?doc_id=108"
-                )
-                return
-            if is_tushare_rate_limit_error(e):
-                log.warning(
-                    "rt_k(doc 372) 限流：%s。低档常为每分钟/每小时 1 次，"
-                    "请设环境变量 RT_K_INTERVAL_SEC=0 关闭本定时任务，"
-                    "或收盘后由 worker 写入 quotes_daily；亦可手动 uv run python scripts/bootstrap_local_data.py。",
-                    e,
-                )
-                return
-            raise
-        if df is None or df.empty:
-            continue
-        for _, r in df.iterrows():
-            stock_code = str(r["ts_code"])
-            pre = to_dec(r.get("pre_close"))
-            clo = to_dec(r.get("close"))
-            pct = calc_pct(pre, clo)
-            # doc 372：rt_k 的 amount 为「元」；与 daily(doc 27) 的「千元」及 quotes_daily 存库对齐
-            amt_yuan = to_dec(r.get("amount"))
-            amount = (amt_yuan / Decimal(1000)) if amt_yuan is not None else None
-            vol = to_dec(r.get("vol"))
-            fs = float_map.get(stock_code)
-            circ = calc_circ_mv(fs, clo)
-            rows_out.append(
-                (trade_d, snapshot_at, stock_code, pre, clo, pct, amount, vol, circ)
+    # doc 372：单次 ts_code 可逗号拼接，接口侧约 6000 条/次，覆盖全市场成分并集无需分批
+    joined = ",".join(codes)
+    try:
+        df = retry_df(lambda: pro.rt_k(ts_code=joined))
+    except Exception as e:
+        if is_tushare_permission_error(e):
+            log.warning(
+                "rt_k skipped: 无接口权限或积分不足 (doc 372)。"
+                "见 https://tushare.pro/document/1?doc_id=108"
             )
+            return
+        if is_tushare_rate_limit_error(e):
+            log.warning(
+                "rt_k(doc 372) 限流：%s。请增大 RT_K_INTERVAL_SEC 或设 RT_K_INTERVAL_SEC=0 关闭轮询；"
+                "详见 https://tushare.pro/document/1?doc_id=108",
+                e,
+            )
+            return
+        raise
+    if df is None or df.empty:
+        log.warning("sync_rt_k: no rows from API")
+        return
+    for _, r in df.iterrows():
+        stock_code = str(r["ts_code"])
+        pre = to_dec(r.get("pre_close"))
+        clo = to_dec(r.get("close"))
+        pct = calc_pct(pre, clo)
+        # doc 372：rt_k 的 amount 为「元」；与 daily(doc 27) 的「千元」及 quotes_daily 存库对齐
+        amt_yuan = to_dec(r.get("amount"))
+        amount = (amt_yuan / Decimal(1000)) if amt_yuan is not None else None
+        vol = to_dec(r.get("vol"))
+        fs = float_map.get(stock_code)
+        circ = calc_circ_mv(fs, clo)
+        rows_out.append(
+            (trade_d, snapshot_at, stock_code, pre, clo, pct, amount, vol, circ)
+        )
 
     if not rows_out:
         log.warning("sync_rt_k: no rows from API")

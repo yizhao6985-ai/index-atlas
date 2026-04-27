@@ -16,9 +16,6 @@ log = logging.getLogger(__name__)
 INDEX_MEMBER_ALL_MIN_INTERVAL_SEC = float(
     os.environ.get("INDEX_MEMBER_ALL_MIN_INTERVAL_SEC", "65")
 )
-BATCH_RT = 600
-
-
 def tushare_pro():
     return ts.pro_api(settings.tushare_token, timeout=60)
 
@@ -31,7 +28,11 @@ def retry_df(callable_fn, retries: int = 3, delay: float = 1.5):
         except Exception as e:
             last = e
             log.warning("tushare attempt %s failed: %s", attempt + 1, e)
-            time.sleep(delay * (attempt + 1))
+            if is_tushare_rate_limit_error(e):
+                # 频控后短重试只会继续撞墙；等约一整分钟再试（与 index_member_all 策略一致）
+                time.sleep(65)
+            else:
+                time.sleep(delay * (attempt + 1))
     if last:
         raise last
 
@@ -48,6 +49,9 @@ def is_tushare_rate_limit_error(exc: BaseException) -> bool:
         "每分钟最多访问" in msg
         or "每小时最多访问" in msg
         or "最多访问该接口" in msg
+        or "频率超限" in msg
+        or "次/分钟" in msg
+        or "次/小时" in msg
     )
 
 
