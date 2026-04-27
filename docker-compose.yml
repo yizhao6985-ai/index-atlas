@@ -1,8 +1,6 @@
-# DB 镜像默认走阿里云 library（同步 Docker Hub），避免服务器直连 registry-1.docker.io 超时。
-# 如需官方 Hub：改为 postgres:16-alpine 并配置本机 registry-mirrors。
 services:
   db:
-    image: registry.cn-hangzhou.aliyuncs.com/library/postgres:16-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: index_atlas
       POSTGRES_USER: postgres
