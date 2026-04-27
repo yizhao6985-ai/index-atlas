@@ -16,3 +16,8 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+# 默认使用清华 PyPI 镜像（中国大陆访问更稳定）；海外开发可临时设 UV_INDEX_URL=https://pypi.org/simple
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
