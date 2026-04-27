@@ -1,6 +1,6 @@
 # Worker（Python）
 
-使用 [uv](https://docs.astral.sh/uv/) 管理依赖与虚拟环境。
+使用 [uv](https://docs.astral.sh/uv/) 管理依赖与虚拟环境。默认 PyPI 索引在 `pyproject.toml` 中设为[清华镜像](https://pypi.tuna.tsinghua.edu.cn/simple)（`uv sync` / `uv lock` 会走国内源）；海外环境可改回 `https://pypi.org/simple`，或按 uv 文档设置 `UV_DEFAULT_INDEX` 等变量覆盖。
 
 ## 本地运行
 
