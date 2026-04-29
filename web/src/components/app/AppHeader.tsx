@@ -2,6 +2,7 @@ import { CloseOutlined, LoadingOutlined, MenuOutlined } from "@ant-design/icons"
 import { Button, Col, Popover, Radio, Row, Select, Space, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import UsageHelpModal from "@/components/app/UsageHelpModal";
 import MarketStatsCharts from "@/components/MarketStatsCharts";
 import { LEGEND_BUCKETS } from "@/lib/colors";
 import type { Metric } from "@/lib/metric";
@@ -59,6 +60,7 @@ export default function AppHeader({
   marketRows,
 }: AppHeaderProps) {
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [usageHelpOpen, setUsageHelpOpen] = useState(false);
 
   const closeMobile = useCallback(() => setMobileSheetOpen(false), []);
 
@@ -375,18 +377,31 @@ export default function AppHeader({
         className="pointer-events-none fixed left-0 right-0 top-0 z-40 sm:hidden"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
-        <div className="pointer-events-auto box-border flex h-[var(--app-mobile-header-bar-h)] items-center justify-between border-b border-slate-200/50 bg-slate-900/45 px-3 shadow-sm backdrop-blur-md">
-          <span className="text-sm font-semibold text-white drop-shadow-sm">A 股指数云图</span>
-          <Button
-            type="primary"
-            size="small"
-            icon={<MenuOutlined />}
-            onClick={() => setMobileSheetOpen(true)}
-            aria-expanded={mobileSheetOpen}
-            aria-label="打开数据与设置"
-          >
-            数据与设置
-          </Button>
+        <div className="pointer-events-auto box-border flex h-[var(--app-mobile-header-bar-h)] items-center justify-between gap-2 border-b border-slate-200/50 bg-slate-900/45 px-3 shadow-sm backdrop-blur-md">
+          <span className="min-w-0 truncate text-sm font-semibold text-white drop-shadow-sm">
+            A 股指数云图
+          </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              type="text"
+              size="small"
+              className="!text-white/95 hover:!bg-white/10 hover:!text-white"
+              onClick={() => setUsageHelpOpen(true)}
+              aria-label="使用说明"
+            >
+              使用说明
+            </Button>
+            <Button
+              type="primary"
+              size="small"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileSheetOpen(true)}
+              aria-expanded={mobileSheetOpen}
+              aria-label="打开数据与设置"
+            >
+              数据与设置
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -434,9 +449,14 @@ export default function AppHeader({
 
       <header className="hidden shrink-0 border-b border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:block sm:px-4 sm:py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-3">
-          <h1 className="m-0 shrink-0 text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
-            A 股指数云图
-          </h1>
+          <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="m-0 text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+              A 股指数云图
+            </h1>
+            <Button type="link" size="small" className="!p-0" onClick={() => setUsageHelpOpen(true)}>
+              使用说明
+            </Button>
+          </div>
           {controlCluster({ mobile: false })}
         </div>
 
@@ -452,6 +472,8 @@ export default function AppHeader({
           </div>
         </div>
       </header>
+
+      <UsageHelpModal open={usageHelpOpen} onClose={() => setUsageHelpOpen(false)} />
     </>
   );
 }
