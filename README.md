@@ -1,18 +1,20 @@
 # A 股指数成分股 Treemap
 
-学习演示项目：申万 **L1→L2→L3→股** 热力图，面积支持 **流通市值 / 成交额**，涨跌按离散档位配色。数据经 **Tushare** 入库；**`TUSHARE_TOKEN` 与数据库连接等**均在仓库根目录 `.env` 配置（见 [`.env.example`](.env.example)）。
+学习演示项目：申万 **L1→L2→L3→股** 热力图，面积支持 **流通市值 / 成交额**，涨跌按离散档位配色。数据经 **Tushare** 入库；`**TUSHARE_TOKEN` 与数据库连接等**均在仓库根目录 `.env` 配置（见 `[.env.example](.env.example)`）。
 
 ## 使用效果（界面展示）
 
-以下为实际运行 Web 前端后的界面示意（与仓库内 [`docs/screenshot-treemap.png`](docs/screenshot-treemap.png) 为同一张截图），便于快速理解产品形态：
+以下为实际运行 Web 前端后的界面示意（与仓库内 `[docs/screenshot-treemap.png](docs/screenshot-treemap.png)` 为同一张截图），便于快速理解产品形态：
 
-| 区域 | 说明 |
-|------|------|
-| **顶栏** | 指数选择（如中证全指 `000985.SH`）、面积维度（流通市值 / 成交额 / 成分权重）、交易日与数据截止时间、交易中/快照状态；右侧为涨跌幅**色阶图例**。 |
-| **统计条** | 成分数量、流通市值与成交额量级、等权涨跌、涨/跌/平家数；可展开「涨跌统计」。 |
-| **主云图** | 大块为**申万行业**，内含个股矩形；**面积**对应当前指标，**颜色**对应当日涨跌幅档位；可逐级下钻与返回。 |
 
-![A 股指数云图 — 主界面截图](docs/screenshot-treemap.png)
+| 区域      | 说明                                                                                  |
+| ------- | ----------------------------------------------------------------------------------- |
+| **顶栏**  | 指数选择（如中证全指 `000985.SH`）、面积维度（流通市值 / 成交额 / 成分权重）、交易日与数据截止时间、交易中/快照状态；右侧为涨跌幅**色阶图例**。 |
+| **统计条** | 成分数量、流通市值与成交额量级、等权涨跌、涨/跌/平家数；可展开「涨跌统计」。                                             |
+| **主云图** | 大块为**申万行业**，内含个股矩形；**面积**对应当前指标，**颜色**对应当日涨跌幅档位；可逐级下钻与返回。                           |
+
+
+A 股指数云图 — 主界面截图
 
 页面顶栏还提供 **「使用说明」** 入口（弹窗内为简要操作与免责提示）。
 
@@ -32,7 +34,7 @@
   - `GET /api/indices/{code}/market?window=1d|7d|30d`：读表 `market_constituent_rollups`（1/7/30 **交易日** 窗，由 [worker 晚盘/灌库](worker/app/scheduled_jobs.py) 在 `quotes_daily` 更新后重算，避免每次请求在线聚合；`1d` 无预计算行时回退为旧版「rt ∪ daily 最新」查询。
   - `GET /api/indices/{code}/market?tradeDate=YYYY-MM-DD`：单日历史，仍只读 `quotes_daily`（**忽略** `window`）。
   - `GET /api/indices/{code}/market/rt`：与「rt ∪ daily 最新」一致（**结构同** `market` live）；盘中用 `quotes_rt`，晚盘 `quotes_rt` 清空后走 `quotes_daily` 当日。
-  - 新库/升级请按序执行 [db/migrations](db/migrations)（`001`…`006` 等，见目录内文件名）；`docker compose` 的 `db` 镜像在构建时把 `db/migrations` 复制进 `docker-entrypoint-initdb.d`，**仅在新数据目录首次初始化**时按文件名顺序执行其中全部 `.sql`；修改 SQL 后需 `docker compose build db`（或 `up --build`）。已有库请按需手动执行尚未应用的脚本。
+  - 新库/升级请按序执行 [db/migrations](db/migrations)（`001`…`007` 等，见目录内文件名）；`docker compose` 的 `db` 镜像在构建时把 `db/migrations` 复制进 `docker-entrypoint-initdb.d`，**仅在新数据目录首次初始化**时按文件名顺序执行其中全部 `.sql`；修改 SQL 后需 `docker compose build db`（或 `up --build`）。已有库请按需手动执行尚未应用的脚本。
 
 ### OpenAPI → 前端代码生成
 
@@ -55,7 +57,7 @@ BFF 在 [api/src/openapi-spec/setup.ts](api/src/openapi-spec/setup.ts) 内用 **
   ```bash
    docker compose -f docker-compose.db.yml up -d
   ```
-   首次启动会在空数据目录上自动执行镜像内迁移 SQL（与 [db/migrations](db/migrations) 一致，按文件名排序）。连接串：`postgresql://postgres:postgres@localhost:5432/index_atlas`（与根目录 [`.env.example`](.env.example) 中 `DATABASE_URL` 一致）。停止：`docker compose -f docker-compose.db.yml down`（数据在卷 `pgdata` 中；需清空可加 `-v`）。本地跑 api/worker 时可在根目录 `cp .env.example .env` 后填同一连接串。
+   首次启动会在空数据目录上自动执行镜像内迁移 SQL（与 [db/migrations](db/migrations) 一致，按文件名排序）。连接串：`postgresql://postgres:postgres@localhost:5432/index_atlas`（与根目录 `[.env.example](.env.example)` 中 `DATABASE_URL` 一致）。停止：`docker compose -f docker-compose.db.yml down`（数据在卷 `pgdata` 中；需清空可加 `-v`）。本地跑 api/worker 时可在根目录 `cp .env.example .env` 后填同一连接串。
    若不用 Docker，可自行安装 PostgreSQL 并手动执行同一 SQL。
 2. **环境变量**：在**仓库根目录**执行 `cp .env.example .env`，填写 `TUSHARE_TOKEN`、`DATABASE_URL`（及按需调整 API 端口等）。
 3. **Worker**：安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后：

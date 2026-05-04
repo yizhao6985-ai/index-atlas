@@ -28,7 +28,7 @@ export function useAppState(): AppStateValue {
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [indexCode, setIndexCode] = useState("000985.SH");
-  const [metric, setMetric] = useState<Metric>("weight");
+  const [metric, setMetric] = useState<Metric>("mcap");
   const [isTrading, setIsTrading] = useState(() => isTradingSessionSimple());
 
   useEffect(() => {

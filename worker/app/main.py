@@ -16,6 +16,7 @@ from app.data_readiness import (
     require_treemap_data_or_exit,
 )
 from app.scheduled_jobs import job_evening, job_rt_k
+from app.trade_calendar_sync import sync_trade_cal_month_window
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,6 +92,12 @@ def main() -> None:
     else:
         require_treemap_data_or_exit()
 
+    try:
+        log.info("startup: sync trade_cal(doc 26) month window")
+        sync_trade_cal_month_window()
+    except Exception:
+        log.exception("startup: trade_cal(doc 26) sync failed（rt_k 将暂用工作日 fallback 直至 evening 成功）")
+
     sched = BlockingScheduler(timezone="Asia/Shanghai")
     if settings.rt_k_interval_sec > 0:
         threading.Thread(
@@ -100,8 +107,9 @@ def main() -> None:
             daemon=True,
         ).start()
         log.info(
-            "rt_k(doc 372) 已启用：相邻两轮开始目标间隔 %ss（含本轮请求与写库；不足则仅补足剩余休眠）"
-            "；仅交易时段内会请求 Tushare；收盘后由 16:15 任务写入 quotes_daily 并清空 quotes_rt",
+            "rt_k(doc 372) 已启用：相邻两轮开始目标间隔 %ss；"
+            "仅在连续竞价且库内 SSE 日历判定为交易日时请求 rt_k（同日开市判断内存缓存）；"
+            "trade_cal 在启动与 16:15 evening 同步",
             settings.rt_k_interval_sec,
         )
     else:

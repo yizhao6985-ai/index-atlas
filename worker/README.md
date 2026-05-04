@@ -37,13 +37,14 @@ uv run python -m app.main
 
 ### Tushare 权限与积分
 
-流通股本来自 `**daily_basic`** [doc 32](https://tushare.pro/document/2?doc_id=32) 的 `**float_share`（万股）**，写入 `share_premarket`（与 `circ_mv` 公式一致）。申万行业来自 `**index_classify`** [181](https://tushare.pro/document/2?doc_id=181) + `**index_member_all`** [335](https://tushare.pro/document/2?doc_id=335)，写入 `stocks.sw_l1/l2/l3`_*。`**rt_k*`* [372](https://tushare.pro/document/2?doc_id=372) 等亦有积分要求，见 [权限说明](https://tushare.pro/document/1?doc_id=108)。
+流通股本来自 `**daily_basic`** [doc 32](https://tushare.pro/document/2?doc_id=32) 的 `**float_share`（万股）**，写入 `share_premarket`（与 `circ_mv` 公式一致）。申万行业来自 `**index_classify`** [181](https://tushare.pro/document/2?doc_id=181) + `**index_member_all`** [335](https://tushare.pro/document/2?doc_id=335)，写入 `stocks.sw_l1/l2/l3`_*。`**rt_k`** [372](https://tushare.pro/document/2?doc_id=372) 等亦有积分要求，见 [权限说明](https://tushare.pro/document/1?doc_id=108)。
 
 - 若无 `**daily_basic`** 权限：`circ_mv` 可能为空，热力图请用 **「成交额」** 作面积。
 - **行情表拆分**：`**quotes_daily`** 存 Tushare **daily（doc 27）** 历史日线，供 API `?tradeDate=` 与保留窗口裁剪；`**quotes_rt`** 存 **rt_k（doc 372）** 盘中实时快照。BFF 默认大盘接口优先读 `quotes_rt`，无则回退 `quotes_daily` 最新收盘。
 - `**bootstrap_local_data.py`**：手动全量初始化，逻辑与 worker 启动准备一致。
-- **盘中**：默认 `**RT_K_INTERVAL_SEC=10**`：后台线程使**相邻两轮 `job_rt_k` 开始**约隔该秒数；本轮请求+写库耗时从间隔中扣除，仅 **sleep 剩余时间**。**rt_k** 单次请求逗号拼接成分并集（接口约 6000 条/次）。**仅**在 `is_trading_session()` 内才会真正请求 **rt_k**（低档积分请设 `RT_K_INTERVAL_SEC=0`）。
-- **收盘**：工作日 **16:15** 任务：`index_weight` → 申万 → `daily_basic`（流通股本）→ **daily** 更新 `quotes_daily` 并裁剪约 30 交易日 → `**TRUNCATE quotes_rt`**（日线已落库，清空实时表）。
+- **盘中**：默认 `**RT_K_INTERVAL_SEC=10`**：仅 **`is_trading_session()`** 且 **`today_sse_is_trading_day()`**（读 `trade_calendar`；**同一自然日内内存缓存**，不每 10s 查库）时为交易日才拉 **rt_k**。无库内当日行时暂用 `chinese_calendar` 工作日作 fallback。
+- **trade_cal** [doc 26](https://tushare.pro/document/2?doc_id=26)：写入 `trade_calendar`（SSE 未来约一月）；**进程启动时拉一次**，**16:15 evening** 再同步；10s 线程**不**调 Tushare。需 **`007_trade_calendar.sql`**。
+- **收盘**：工作日 **16:15** 任务：**trade_cal(doc 26)** 同步 SSE 日历 → `index_weight` → 申万 → `daily_basic`（流通股本）→ **daily** 更新 `quotes_daily` 并裁剪约 30 交易日 → `**TRUNCATE quotes_rt`**（日线已落库，清空实时表）。
 - 申万默认 `SHENWAN_MEMBER_QUERY_LEVEL=L1`，`SHENWAN_MEMBER_INTERVAL_SEC=0.3`。旧库若仍有 `quotes_snapshot`，执行 `db/migrations/003_quotes_split_snapshot_to_daily_rt.sql`（必要时先 `002`）。
 
 **Treemap 仍为空**时，多半是未灌库或 Tushare 权限不足。重新执行全量脚本即可（会刷新成分、行业、股本与约 30 日日线并裁剪）：
