@@ -79,9 +79,11 @@ BFF 在 [api/src/openapi-spec/setup.ts](api/src/openapi-spec/setup.ts) 内用 **
 docker compose up --build
 ```
 
-- 前端：[http://localhost:8080](http://localhost:8080)
-- API 直连：[http://localhost:3001/api/indices](http://localhost:3001/api/indices)
-- OpenAPI：Swagger [http://localhost:3001/api/docs](http://localhost:3001/api/docs) · [http://localhost:3001/api/openapi.json](http://localhost:3001/api/openapi.json)（经 Nginx 时用 `8080` 同源路径即可）
+- 前端（宿主机 **80**：容器内 Nginx `listen 80`）：[http://localhost](http://localhost)
+- HTTP API（仅此入口对外时走同源前缀）：`/api/…`，例如 [http://localhost/api/indices](http://localhost/api/indices)
+- OpenAPI：Swagger [http://localhost/api/docs](http://localhost/api/docs) · [http://localhost/api/openapi.json](http://localhost/api/openapi.json)
+
+若需在本机调试时**直连** Node BFF（不经过 Nginx），可在 `compose` 的 `api` 服务上加回 `ports: ["3001:3001"]`；本地开发更常用根目录分段 `docker-compose.db.yml` + `api`/`web` 的 `npm run dev`（见上文「本地开发」）。
 
 `worker` 在无 `TUSHARE_TOKEN` 时会退出；配置 token 后重新 `docker compose up worker`。
 

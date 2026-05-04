@@ -28,8 +28,6 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/index_atlas
       PORT: "3001"
       BFF_CACHE_TTL_MS: "4000"
-    ports:
-      - "3001:3001"
     depends_on:
       db:
         condition: service_healthy
@@ -52,7 +50,7 @@ services:
       context: .
       dockerfile: web/Dockerfile
     ports:
-      - "8080:80"
+      - "80:80"
     depends_on:
       - api
 
