@@ -1,6 +1,6 @@
 /**
  * 指数成分行情：历史日 / 时间窗预计算 / 实时（rt 同路径）；热路径带短 TTL 内存缓存（非空时写入）。
- * `/market/rt` 与 live 相同 SQL：优先 quotes_rt，晚盘 `quotes_rt` 清空后回退为 quotes_daily 当日。
+ * `/market/rt` 与 live 相同 SQL：默认优先 quotes_rt；同一 trade_date 下若 `quotes_daily.snapshot_at` 更新则改用日线（避免收盘后已写日线但尚未清空 rt 时「数据截至」停在盘中较早时间）。
  */
 import type pg from "pg";
 

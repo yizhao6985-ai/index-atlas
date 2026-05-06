@@ -28,7 +28,7 @@ LEFT JOIN stocks s ON s.ts_code = m.con_code
 WHERE i.code = $1 AND m.window_code = $2
 `;
 
-/** 最新成分；行情优先 quotes_rt（rt_k），否则 quotes_daily 最新收盘 */
+/** 最新成分；默认优先 quotes_rt；同一自然日若 quotes_daily 快照更新则改用日线（与晚盘先落库日线再 TRUNCATE rt 之间一致） */
 export const MARKET_SQL_LIVE = `
 WITH idx AS (
   SELECT id, code FROM indices WHERE code = $1
@@ -44,6 +44,8 @@ const_rows AS (
   JOIN idx ON ic.index_id = idx.id
   JOIN const_date cd ON ic.trade_date = cd.td
 ),
+/* 同一 trade_date 下若 quotes_daily 已更新且 snapshot 晚于 quotes_rt，用日线（收盘口径）；
+   否则仍优先 rt：避免「晚盘已落库日线、尚未 TRUNCATE rt」时顶栏仍显示盘中较早「数据截至」。 */
 q_rt AS (
   SELECT DISTINCT ON (stock_code)
     stock_code,
@@ -69,11 +71,41 @@ q_d AS (
 SELECT
   c.con_code AS "tsCode",
   COALESCE(NULLIF(TRIM(s.name), ''), c.con_code) AS "name",
-  COALESCE(rt.circ_mv, qd.circ_mv) AS "circMv",
-  COALESCE(rt.amount, qd.amount) AS "amount",
-  COALESCE(rt.pct_change, qd.pct_change) AS "pctChange",
-  CASE WHEN rt.stock_code IS NOT NULL THEN rt.snapshot_at ELSE qd.snapshot_at END AS "snapshotAt",
-  CASE WHEN rt.stock_code IS NOT NULL THEN rt.trade_date ELSE qd.trade_date END AS "tradeDate",
+  CASE
+    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
+      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
+      THEN qd.circ_mv
+    WHEN rt.stock_code IS NOT NULL THEN rt.circ_mv
+    ELSE qd.circ_mv
+  END AS "circMv",
+  CASE
+    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
+      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
+      THEN qd.amount
+    WHEN rt.stock_code IS NOT NULL THEN rt.amount
+    ELSE qd.amount
+  END AS "amount",
+  CASE
+    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
+      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
+      THEN qd.pct_change
+    WHEN rt.stock_code IS NOT NULL THEN rt.pct_change
+    ELSE qd.pct_change
+  END AS "pctChange",
+  CASE
+    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
+      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
+      THEN qd.snapshot_at
+    WHEN rt.stock_code IS NOT NULL THEN rt.snapshot_at
+    ELSE qd.snapshot_at
+  END AS "snapshotAt",
+  CASE
+    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
+      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
+      THEN qd.trade_date
+    WHEN rt.stock_code IS NOT NULL THEN rt.trade_date
+    ELSE qd.trade_date
+  END AS "tradeDate",
   c.weight AS "weight",
   ${SHENWAN_IN_SELECT}
 FROM const_rows c

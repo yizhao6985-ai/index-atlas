@@ -51,6 +51,10 @@ services:
       dockerfile: web/Dockerfile
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      # 将本仓库 web/certs/ 中的 www.indexatlas.xyz.key、www.indexatlas.xyz.pem 挂载进容器
+      - ./web/certs:/etc/nginx/certs:ro
     depends_on:
       - api
 

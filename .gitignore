@@ -10,6 +10,10 @@ api/.env
 *.log
 .DS_Store
 
+# TLS 证书与私钥（放置于 web/certs/，勿提交仓库）
+web/certs/*.key
+web/certs/*.pem
+
 .vscode
 .cursor
 .mypy_cache
