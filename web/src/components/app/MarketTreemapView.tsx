@@ -1,8 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import TreemapChart from "@/components/TreemapChart";
-import { getMarketSnapshotRt } from "@/api/generated/sdk.gen";
+import { useMarketSnapshotQuery } from "@/hooks/useMarketSnapshotQuery";
 import { useAppState } from "@/context/AppStateContext";
 import { buildShenwanTreemapTree, rowsToFlat } from "@/lib/treemapBuilder";
 
@@ -10,21 +9,9 @@ import { buildShenwanTreemapTree, rowsToFlat } from "@/lib/treemapBuilder";
  * 主内容区：指数行情快照 + 申万 treemap。
  */
 export default function MarketTreemapView() {
-  const { indexCode, metric, isTrading } = useAppState();
+  const { metric } = useAppState();
 
-  const marketQuery = useQuery({
-    queryKey: ["market", "rt", indexCode, metric],
-    queryFn: async () => {
-      const res = await getMarketSnapshotRt({
-        path: { code: indexCode },
-        query: { sortBy: metric },
-      });
-      if (res.error) throw new Error(`market/rt ${JSON.stringify(res.error)}`);
-      if (res.data === undefined) throw new Error("market/rt: empty body");
-      return res.data;
-    },
-    refetchInterval: () => (isTrading ? 10_000 : false),
-  });
+  const marketQuery = useMarketSnapshotQuery();
 
   const tree = useMemo(() => {
     const rows = marketQuery.data?.rows;
