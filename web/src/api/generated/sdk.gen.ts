@@ -50,7 +50,7 @@ export const listIndices = <ThrowOnError extends boolean = false>(options?: Opti
 
 /**
  * 指定指数大盘成分行情快照（原始行）
- * 不传 `tradeDate` 时从预计算表 `market_constituent_rollups` 读 `window`（1d/7d/30d 交易日，由灌库/晚盘根据 quotes_daily 重算）。`1d` 为最近一交易日与当前成分；`7d`/`30d` 为窗内首尾收盘涨跌与成交额合。`1d` 且预计算无行时回退为 live（quotes_rt 优先、否则 quotes_daily 当日）。传 `tradeDate=YYYY-MM-DD` 时忽略 `window`，仅查该日 `quotes_daily` 且成分取最新批。
+ * 不传 `tradeDate` 时从预计算表 `market_constituent_rollups` 读 `window`（1d/7d/30d 交易日，由灌库/晚盘根据 quotes_daily 重算）。`1d` 为最近一交易日与当前成分；`7d`/`30d` 为窗内首尾收盘涨跌与成交额合。`1d` 且预计算无行时回退为 live（quotes_rt 优先、否则 quotes_daily 当日）。传 `tradeDate=YYYY-MM-DD` 时忽略 `window`，仅查该日 `quotes_daily` 且成分取最新批。可选 `sortBy` 按与热力图「面积」一致的字段对 `rows` 排序（权重/成交额/自由流通市值），`sortOrder` 默认 desc。
  */
 export const getMarketSnapshot = <ThrowOnError extends boolean = false>(options: Options<GetMarketSnapshotData, ThrowOnError>) => {
     return (options.client ?? _heyApiClient).get<GetMarketSnapshotResponse, GetMarketSnapshotError, ThrowOnError>({
@@ -61,7 +61,7 @@ export const getMarketSnapshot = <ThrowOnError extends boolean = false>(options:
 
 /**
  * 指定指数成分行情（实时：rt 优先，否则当日 daily）
- * 与 `/market` 的 live 一致：优先 `quotes_rt` 最新一行；晚盘清空 `quotes_rt` 后回退为 `quotes_daily` 当日收盘。返回体结构同 getMarketSnapshot。
+ * 与 `/market` 的 live 一致：优先 `quotes_rt` 最新一行；晚盘清空 `quotes_rt` 后回退为 `quotes_daily` 当日收盘。返回体结构同 getMarketSnapshot。支持 `sortBy`/`sortOrder` 对 `rows` 按面积维度排序。
  */
 export const getMarketSnapshotRt = <ThrowOnError extends boolean = false>(options: Options<GetMarketSnapshotRtData, ThrowOnError>) => {
     return (options.client ?? _heyApiClient).get<GetMarketSnapshotRtResponse, GetMarketSnapshotRtError, ThrowOnError>({
