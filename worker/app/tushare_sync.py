@@ -61,17 +61,17 @@ _QUOTES_RT_UPSERT_SQL = """
                 """
 
 
-def _load_latest_float_map() -> dict[str, Decimal]:
+def _load_latest_free_share_map() -> dict[str, Decimal]:
     with connect() as conn:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute(
                 """
-                SELECT DISTINCT ON (ts_code) ts_code, float_share
+                SELECT DISTINCT ON (ts_code) ts_code, free_share
                 FROM share_premarket
                 ORDER BY ts_code, trade_date DESC
                 """
             )
-            return {r["ts_code"]: Decimal(str(r["float_share"])) for r in cur.fetchall()}
+            return {r["ts_code"]: Decimal(str(r["free_share"])) for r in cur.fetchall()}
 
 
 def _daily_code_filter() -> set[str] | None:
@@ -123,7 +123,7 @@ def clear_quotes_rt() -> None:
 
 def _ingest_daily_dataframe(
     df,
-    float_map: dict[str, Decimal],
+    free_share_map: dict[str, Decimal],
     code_filter: set[str] | None,
 ) -> int:
     """将 daily(doc 27) 单日全市场 DataFrame 写入 quotes_daily（可选仅成分）。"""
@@ -140,8 +140,8 @@ def _ingest_daily_dataframe(
         pct = pct_raw if pct_raw is not None else calc_pct(pre, clo)
         amount = to_dec(r.get("amount"))
         vol = to_dec(r.get("vol"))
-        fs = float_map.get(stock_code)
-        circ = calc_circ_mv(fs, clo)
+        fsw = free_share_map.get(stock_code)
+        circ = calc_circ_mv(fsw, clo)
         rows_out.append(
             (row_td, snapshot_at, stock_code, pre, clo, pct, amount, vol, circ)
         )
@@ -192,7 +192,7 @@ def sync_index_weight() -> None:
 
 def sync_share_float_daily_basic(for_date: datetime.date | None = None) -> None:
     """
-    使用 daily_basic（doc 32）全市场单次请求写入 float_share（万股）→ share_premarket。
+    使用 daily_basic（doc 32）全市场单次请求写入 free_share（自由流通股本，万股）→ share_premarket。
     `ts_code=''` + `trade_date` 一次拉取当日全部标的（接口上限约 6000 条/次）。
     https://tushare.pro/document/2?doc_id=32
     """
@@ -207,7 +207,7 @@ def sync_share_float_daily_basic(for_date: datetime.date | None = None) -> None:
                 lambda s=ds: pro.daily_basic(
                     ts_code="",
                     trade_date=s,
-                    fields="ts_code,trade_date,float_share",
+                    fields="ts_code,trade_date,free_share",
                 )
             )
         except Exception as e:
@@ -219,7 +219,7 @@ def sync_share_float_daily_basic(for_date: datetime.date | None = None) -> None:
                 return
             raise
         if df is None or df.empty:
-            log.warning("daily_basic float_share: no rows for trade_date=%s, try earlier day", ds)
+            log.warning("daily_basic free_share: no rows for trade_date=%s, try earlier day", ds)
             continue
 
         total = 0
@@ -227,35 +227,35 @@ def sync_share_float_daily_basic(for_date: datetime.date | None = None) -> None:
             for _, r in df.iterrows():
                 ts_code = str(r["ts_code"])
                 row_td = parse_tushare_date(r["trade_date"])
-                fs = r["float_share"]
-                if fs is None or (isinstance(fs, float) and fs != fs):
+                fsh = r["free_share"]
+                if fsh is None or (isinstance(fsh, float) and fsh != fsh):
                     continue
                 ensure_stock_stub(conn, ts_code)
                 exec_sql(
                     conn,
                     """
-                    INSERT INTO share_premarket (trade_date, ts_code, float_share)
+                    INSERT INTO share_premarket (trade_date, ts_code, free_share)
                     VALUES (%s, %s, %s)
                     ON CONFLICT (trade_date, ts_code)
-                    DO UPDATE SET float_share = EXCLUDED.float_share
+                    DO UPDATE SET free_share = EXCLUDED.free_share
                     """,
-                    (row_td, ts_code, fs),
+                    (row_td, ts_code, fsh),
                 )
                 total += 1
 
         if total > 0:
             log.info(
-                "daily_basic float_share upserted %s rows (api rows=%s, query trade_date=%s)",
+                "daily_basic free_share upserted %s rows (api rows=%s, query trade_date=%s)",
                 total,
                 len(df),
                 ds,
             )
             return
 
-        log.warning("daily_basic float_share: no valid float_share for trade_date=%s", ds)
+        log.warning("daily_basic free_share: no valid free_share for trade_date=%s", ds)
 
     log.warning(
-        "daily_basic float_share: exhausted candidates from %s; no data (doc 32)",
+        "daily_basic free_share: exhausted candidates from %s; no data (doc 32)",
         anchor,
     )
 
@@ -341,7 +341,7 @@ def sync_rt_k_snapshot() -> None:
     snapshot_at = datetime.datetime.now(datetime.timezone.utc)
 
     codes = fetch_constituent_union_codes()
-    float_map = _load_latest_float_map()
+    free_share_map = _load_latest_free_share_map()
 
     if not codes:
         log.warning("sync_rt_k: no constituents")
@@ -379,8 +379,8 @@ def sync_rt_k_snapshot() -> None:
         amt_yuan = to_dec(r.get("amount"))
         amount = (amt_yuan / Decimal(1000)) if amt_yuan is not None else None
         vol = to_dec(r.get("vol"))
-        fs = float_map.get(stock_code)
-        circ = calc_circ_mv(fs, clo)
+        fsw = free_share_map.get(stock_code)
+        circ = calc_circ_mv(fsw, clo)
         rows_out.append(
             (trade_d, snapshot_at, stock_code, pre, clo, pct, amount, vol, circ)
         )
@@ -409,7 +409,7 @@ def sync_quotes_daily_latest_and_prune(for_date: datetime.date | None = None) ->
         return
 
     pro = tushare_pro()
-    float_map = _load_latest_float_map()
+    free_share_map = _load_latest_free_share_map()
     anchor = for_date or today_trade_date()
     candidates = quotes_workday_candidates(for_date)
 
@@ -429,7 +429,7 @@ def sync_quotes_daily_latest_and_prune(for_date: datetime.date | None = None) ->
             log.warning("daily(doc 27): empty for trade_date=%s, try earlier day", ds)
             continue
 
-        n = _ingest_daily_dataframe(df, float_map, code_filter)
+        n = _ingest_daily_dataframe(df, free_share_map, code_filter)
         if n <= 0:
             log.warning(
                 "daily(doc 27): no rows after filter for trade_date=%s (constituents / 全市场筛选)",
@@ -465,7 +465,7 @@ def sync_quotes_daily_bootstrap_window() -> None:
     scan_days = max(need + 30, 55)
     worklist = last_n_workdays_newest_first(today_trade_date(), scan_days)
     pro = tushare_pro()
-    float_map = _load_latest_float_map()
+    free_share_map = _load_latest_free_share_map()
     loaded = 0
     for try_d in reversed(worklist):
         if loaded >= need:
@@ -483,7 +483,7 @@ def sync_quotes_daily_bootstrap_window() -> None:
             raise
         if df is None or df.empty:
             continue
-        n = _ingest_daily_dataframe(df, float_map, code_filter)
+        n = _ingest_daily_dataframe(df, free_share_map, code_filter)
         if n <= 0:
             continue
         loaded += 1

@@ -59,7 +59,7 @@ export type ConstituentQuoteRow = {
      */
     name: string;
     /**
-     * 流通市值（元）：库内为 float_share(万股)×10000×close，与 `quotes_daily`/`quotes_rt` 的 circ_mv 列一致，非 Tushare daily_basic 的万元口径
+     * 自由流通市值（元）：库内为 free_share(万股)×10000×close，与 `quotes_daily`/`quotes_rt` 的 circ_mv 列一致，非 Tushare daily_basic 的万元口径
      */
     circMv: number | unknown;
     /**
@@ -245,13 +245,21 @@ export type GetMarketSnapshotData = {
          * 与 `tradeDate` 二选一：未传 `tradeDate` 时生效。预计算时间窗：1/7/30 个交易日。默认 1d
          */
         window?: '1d' | '7d' | '30d';
+        /**
+         * 按面积维度对 `rows` 排序：`weight` 成分权重、`turnover` 成交额（千元）、`mcap` 自由流通市值（元）；不传则保持 SQL 顺序
+         */
+        sortBy?: 'weight' | 'turnover' | 'mcap';
+        /**
+         * 与 `sortBy` 联用；默认 `desc`（数值从大到小，null 靠后）
+         */
+        sortOrder?: 'asc' | 'desc';
     };
     url: '/api/indices/{code}/market';
 };
 
 export type GetMarketSnapshotErrors = {
     /**
-     * tradeDate 或 window 参数非法
+     * tradeDate、window 或 sort 相关参数非法
      */
     400: ErrorBody;
     /**
@@ -283,11 +291,24 @@ export type GetMarketSnapshotRtData = {
          */
         code: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * 按面积维度对 `rows` 排序：`weight` 成分权重、`turnover` 成交额（千元）、`mcap` 自由流通市值（元）
+         */
+        sortBy?: 'weight' | 'turnover' | 'mcap';
+        /**
+         * 与 `sortBy` 联用；默认 `desc`
+         */
+        sortOrder?: 'asc' | 'desc';
+    };
     url: '/api/indices/{code}/market/rt';
 };
 
 export type GetMarketSnapshotRtErrors = {
+    /**
+     * sort 相关参数非法
+     */
+    400: ErrorBody;
     /**
      * 未知指数代码
      */

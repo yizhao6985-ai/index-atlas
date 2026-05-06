@@ -35,12 +35,12 @@ CREATE TABLE IF NOT EXISTS index_constituents (
 CREATE INDEX IF NOT EXISTS idx_index_constituents_index_date
   ON index_constituents (index_id, trade_date DESC);
 
--- 流通股本 float_share（万股）：由 worker 经 Tushare daily_basic(doc 32) 写入
+-- 自由流通股本 free_share（万股）：由 worker 经 Tushare daily_basic(doc 32) 写入
 CREATE TABLE IF NOT EXISTS share_premarket (
   id              BIGSERIAL PRIMARY KEY,
   trade_date      DATE NOT NULL,
   ts_code         VARCHAR(16) NOT NULL REFERENCES stocks (ts_code) ON DELETE CASCADE,
-  float_share     NUMERIC(24, 4) NOT NULL,
+  free_share      NUMERIC(24, 4) NOT NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (trade_date, ts_code)
 );

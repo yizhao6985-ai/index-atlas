@@ -10,10 +10,9 @@ export function registerMarketComponentSchemas(registry: OpenAPIRegistry) {
         tsCode: z.string().openapi({ description: "股票代码（Tushare 形式，如 600000.SH）" }),
         // 证券简称
         name: z.string().openapi({ description: "证券简称" }),
-        // 流通市值（万元）
         circMv: z.union([z.number(), z.null()]).openapi({
           description:
-            "流通市值（元）：库内为 float_share(万股)×10000×close，与 `quotes_daily`/`quotes_rt` 的 circ_mv 列一致，非 Tushare daily_basic 的万元口径",
+            "自由流通市值（元）：库内为 free_share(万股)×10000×close，与 `quotes_daily`/`quotes_rt` 的 circ_mv 列一致，非 Tushare daily_basic 的万元口径",
         }),
         // 成交额（千元）
         amount: z.union([z.number(), z.null()]).openapi({

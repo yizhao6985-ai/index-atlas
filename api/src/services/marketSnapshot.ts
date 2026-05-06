@@ -6,6 +6,11 @@ import type pg from "pg";
 
 import type { MarketSnapshotResponse } from "../openapi.js";
 import type { MarketWindow } from "../lib/marketWindow.js";
+import {
+  type MarketRowSortBy,
+  type MarketRowSortOrder,
+  sortMarketSnapshotRows,
+} from "../lib/marketRowSort.js";
 import { BFF_CACHE_TTL_MS } from "../config.js";
 import { aggregateSnapshotMeta } from "../lib/snapshotMeta.js";
 import {
@@ -50,6 +55,18 @@ function mapRow(row: Record<string, unknown>) {
   };
 }
 
+function withSortedRows(
+  body: MarketSnapshotResponse,
+  sortBy: MarketRowSortBy | null,
+  sortOrder: MarketRowSortOrder,
+): MarketSnapshotResponse {
+  if (sortBy == null) return body;
+  return {
+    ...body,
+    rows: sortMarketSnapshotRows(body.rows, sortBy, sortOrder),
+  };
+}
+
 /**
  * 拉取与 OpenAPI 一致的 MarketSnapshot 体。
  * - `historicalTd`：单日 quotes_daily
@@ -58,11 +75,16 @@ function mapRow(row: Record<string, unknown>) {
 export async function getMarketSnapshot(
   pool: pg.Pool,
   code: string,
-  options: { historicalTd: string | null; window: MarketWindow },
+  options: {
+    historicalTd: string | null;
+    window: MarketWindow;
+    sortBy: MarketRowSortBy | null;
+    sortOrder: MarketRowSortOrder;
+  },
 ): Promise<
   { kind: "ok"; body: MarketSnapshotResponse } | { kind: "not_found" }
 > {
-  const { historicalTd, window } = options;
+  const { historicalTd, window, sortBy, sortOrder } = options;
   const cacheKey =
     historicalTd != null
       ? `${code}\t${historicalTd}\thist`
@@ -70,7 +92,7 @@ export async function getMarketSnapshot(
   const now = Date.now();
   const hit = marketCache.get(cacheKey);
   if (hit && hit.exp > now) {
-    return { kind: "ok", body: hit.body };
+    return { kind: "ok", body: withSortedRows(hit.body, sortBy, sortOrder) };
   }
 
   const idxCheck = await pool.query("SELECT 1 FROM indices WHERE code = $1", [
@@ -116,7 +138,7 @@ export async function getMarketSnapshot(
   if (r.rows.length > 0) {
     marketCache.set(cacheKey, { exp: now + BFF_CACHE_TTL_MS, body });
   }
-  return { kind: "ok", body };
+  return { kind: "ok", body: withSortedRows(body, sortBy, sortOrder) };
 }
 
 /**
@@ -125,14 +147,16 @@ export async function getMarketSnapshot(
 export async function getMarketSnapshotRt(
   pool: pg.Pool,
   code: string,
+  options: { sortBy: MarketRowSortBy | null; sortOrder: MarketRowSortOrder },
 ): Promise<
   { kind: "ok"; body: MarketSnapshotResponse } | { kind: "not_found" }
 > {
+  const { sortBy, sortOrder } = options;
   const cacheKey = `${code}\trt`;
   const now = Date.now();
   const hit = rtCache.get(cacheKey);
   if (hit && hit.exp > now) {
-    return { kind: "ok", body: hit.body };
+    return { kind: "ok", body: withSortedRows(hit.body, sortBy, sortOrder) };
   }
 
   const idxCheck = await pool.query("SELECT 1 FROM indices WHERE code = $1", [
@@ -156,5 +180,5 @@ export async function getMarketSnapshotRt(
   if (r.rows.length > 0) {
     rtCache.set(cacheKey, { exp: now + BFF_CACHE_TTL_MS, body });
   }
-  return { kind: "ok", body };
+  return { kind: "ok", body: withSortedRows(body, sortBy, sortOrder) };
 }

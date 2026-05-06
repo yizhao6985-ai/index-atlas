@@ -14,7 +14,7 @@ import {
 import type { ConstituentQuoteRow, IndicesResponse } from "@/api/generated/types.gen";
 
 const METRIC_OPTIONS: readonly (readonly [Metric, string])[] = [
-  ["mcap", "流通市值"],
+  ["mcap", "自由流通市值"],
   ["turnover", "成交额"],
   ["weight", "成分权重"],
 ] as const;
@@ -264,7 +264,7 @@ export default function AppHeader({
         成分 <strong className="tabular-nums text-slate-900">{summary.count}</strong> 只
       </span>
       <span className="shrink-0 whitespace-nowrap">
-        流通市值（约）{" "}
+        自由流通市值（约）{" "}
         <strong className="tabular-nums text-slate-900">
           {fmtNum(totalCircMvToTrillionYuan(summary.totalCircMvWan), 2)}
         </strong>{" "}

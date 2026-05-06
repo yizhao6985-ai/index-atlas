@@ -4,7 +4,7 @@
 顺序（均为拉取接口当前可得最新数据，日线窗口见环境变量）：
   1. index_weight → 指数最新成分与权重
   2. 申万行业 → stocks.sw_*（最新行业分类与成分）
-  3. daily_basic → share_premarket（最新流通股本）
+  3. daily_basic → share_premarket（最新自由流通股本 free_share）
   4. daily(doc 27) → quotes_daily：回填约 QUOTES_DAILY_BOOTSTRAP_TRADE_DAYS 个交易日，
      结束后按 QUOTES_DAILY_RETENTION_TRADE_DAYS 删除更早交易日的整表数据（默认均 30）。
 

@@ -1,6 +1,6 @@
 # A 股指数成分股 Treemap
 
-学习演示项目：申万 **L1→L2→L3→股** 热力图，面积支持 **流通市值 / 成交额**，涨跌按离散档位配色。数据经 **Tushare** 入库；`**TUSHARE_TOKEN` 与数据库连接等**均在仓库根目录 `.env` 配置（见 `[.env.example](.env.example)`）。
+学习演示项目：申万 **L1→L2→L3→股** 热力图，面积支持 **自由流通市值 / 成交额**，涨跌按离散档位配色。数据经 **Tushare** 入库；`**TUSHARE_TOKEN` 与数据库连接等**均在仓库根目录 `.env` 配置（见 `[.env.example](.env.example)`）。
 
 ## 使用效果（界面展示）
 
@@ -9,8 +9,8 @@
 
 | 区域      | 说明                                                                                  |
 | ------- | ----------------------------------------------------------------------------------- |
-| **顶栏**  | 指数选择（如中证全指 `000985.SH`）、面积维度（流通市值 / 成交额 / 成分权重）、交易日与数据截止时间、交易中/快照状态；右侧为涨跌幅**色阶图例**。 |
-| **统计条** | 成分数量、流通市值与成交额量级、等权涨跌、涨/跌/平家数；可展开「涨跌统计」。                                             |
+| **顶栏**  | 指数选择（如中证全指 `000985.SH`）、面积维度（自由流通市值 / 成交额 / 成分权重）、交易日与数据截止时间、交易中/快照状态；右侧为涨跌幅**色阶图例**。 |
+| **统计条** | 成分数量、自由流通市值与成交额量级、等权涨跌、涨/跌/平家数；可展开「涨跌统计」。                                             |
 | **主云图** | 大块为**申万行业**，向内嵌套至个股矩形；**面积**对应当前指标，**颜色**对应当日涨跌幅档位；单层嵌套展示（非逐级点击进入/面包屑返回）。个股可点进雪球（若配置）。 |
 
 
@@ -34,7 +34,7 @@ A 股指数云图 — 主界面截图
   - `GET /api/indices/{code}/market?window=1d|7d|30d`：读表 `market_constituent_rollups`（1/7/30 **交易日** 窗，由 [worker 晚盘/灌库](worker/app/scheduled_jobs.py) 在 `quotes_daily` 更新后重算，避免每次请求在线聚合；`1d` 无预计算行时回退为旧版「rt ∪ daily 最新」查询。
   - `GET /api/indices/{code}/market?tradeDate=YYYY-MM-DD`：单日历史，仍只读 `quotes_daily`（**忽略** `window`）。
   - `GET /api/indices/{code}/market/rt`：与「rt ∪ daily 最新」一致（**结构同** `market` live）；盘中用 `quotes_rt`，晚盘 `quotes_rt` 清空后走 `quotes_daily` 当日。
-  - 新库/升级请按序执行 [db/migrations](db/migrations)（`001`…`007` 等，见目录内文件名）；`docker compose` 的 `db` 镜像在构建时把 `db/migrations` 复制进 `docker-entrypoint-initdb.d`，**仅在新数据目录首次初始化**时按文件名顺序执行其中全部 `.sql`；修改 SQL 后需 `docker compose build db`（或 `up --build`）。已有库请按需手动执行尚未应用的脚本。
+  - 新库/升级请按序执行 [db/migrations](db/migrations)（`001`…`008` 等，见目录内文件名）；`docker compose` 的 `db` 镜像在构建时把 `db/migrations` 复制进 `docker-entrypoint-initdb.d`，**仅在新数据目录首次初始化**时按文件名顺序执行其中全部 `.sql`；修改 SQL 后需 `docker compose build db`（或 `up --build`）。已有库请按需手动执行尚未应用的脚本。
 
 ### OpenAPI → 前端代码生成
 

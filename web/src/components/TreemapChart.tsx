@@ -10,7 +10,7 @@ import { totalAmountToYiYuan } from "@/lib/marketStats";
 import { xueqiuStockUrl } from "@/lib/xueqiu";
 import { useEcharts } from "@/hooks/useEcharts";
 
-/** 流通市值：库内 `circ_mv` 为**元**（非万元）→ 亿元 */
+/** 自由流通市值：库内 `circ_mv` 为**元**（非万元）→ 亿元 */
 function fmtCircMvYi(yuan: number | null | undefined): string {
   if (yuan == null || Number.isNaN(Number(yuan)) || Number(yuan) <= 0) return "—";
   return `${(Number(yuan) / 1e8).toFixed(2)} 亿`;
@@ -100,7 +100,7 @@ export default function TreemapChart({ root }: { root: TreemapNode }) {
               `${code}<b>${name}</b>`,
               `申万: ${swPath || "—"}`,
               `涨跌幅: ${pctStr}`,
-              `流通市值: ${circ}`,
+              `自由流通市值: ${circ}`,
               `成交额: ${turnover}`,
               `成分权重: ${w}`,
               ...(xq

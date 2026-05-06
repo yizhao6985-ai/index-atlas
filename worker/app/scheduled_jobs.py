@@ -37,7 +37,7 @@ def job_rt_k() -> None:
 
 
 def job_evening() -> None:
-    """工作日 16:15：拉取未来约一月 SSE 交易日历；指数权重、流通股本、申万、daily→quotes_daily，最后清空 quotes_rt。"""
+    """工作日 16:15：拉取未来约一月 SSE 交易日历；指数权重、自由流通股本、申万、daily→quotes_daily，最后清空 quotes_rt。"""
     try:
         sync_trade_cal_month_window()
     except Exception:
@@ -53,7 +53,7 @@ def job_evening() -> None:
     try:
         sync_share_float_daily_basic()
     except Exception:
-        log.exception("evening sync: daily_basic float_share failed")
+        log.exception("evening sync: daily_basic free_share failed")
     try:
         sync_quotes_daily_latest_and_prune()
     except Exception:

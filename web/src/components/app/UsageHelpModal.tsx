@@ -23,7 +23,7 @@ export default function UsageHelpModal({ open, onClose }: UsageHelpModalProps) {
         </li>
         <li>
           <strong>矩形面积</strong>：表示当前选择的指标——
-          <strong>流通市值</strong>、<strong>成交额</strong> 或{" "}
+          <strong>自由流通市值</strong>、<strong>成交额</strong> 或{" "}
           <strong>成分权重</strong>（在顶部「面积」中切换）。
         </li>
         <li>

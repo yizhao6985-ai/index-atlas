@@ -9,6 +9,7 @@ import { parseOptionalMarketWindow } from "../lib/marketWindow.js";
 import { fetchIndicesList } from "../services/indices.js";
 import { getMarketSnapshot, getMarketSnapshotRt } from "../services/marketSnapshot.js";
 import { parseOptionalTradeDate } from "../lib/tradeDate.js";
+import { parseOptionalMarketRowSort } from "../lib/marketRowSort.js";
 
 export function createIndicesRouter(pool: pg.Pool) {
   const router = Router();
@@ -25,8 +26,18 @@ export function createIndicesRouter(pool: pg.Pool) {
 
   router.get("/:code/market/rt", async (req, res) => {
     const code = req.params.code;
+    const sortParsed = parseOptionalMarketRowSort(
+      req.query as Record<string, unknown>,
+    );
+    if (!sortParsed.ok) {
+      res.status(400).json({ error: "bad_sort" });
+      return;
+    }
     try {
-      const out = await getMarketSnapshotRt(pool, code);
+      const out = await getMarketSnapshotRt(pool, code, {
+        sortBy: sortParsed.sortBy,
+        sortOrder: sortParsed.sortOrder,
+      });
       if (out.kind === "not_found") {
         res.status(404).json({ error: "not_found" });
         return;
@@ -50,10 +61,19 @@ export function createIndicesRouter(pool: pg.Pool) {
       res.status(400).json({ error: "bad_window" });
       return;
     }
+    const sortParsed = parseOptionalMarketRowSort(
+      req.query as Record<string, unknown>,
+    );
+    if (!sortParsed.ok) {
+      res.status(400).json({ error: "bad_sort" });
+      return;
+    }
     try {
       const out = await getMarketSnapshot(pool, code, {
         historicalTd: tdParsed.value,
         window: wParsed.value,
+        sortBy: sortParsed.sortBy,
+        sortOrder: sortParsed.sortOrder,
       });
       if (out.kind === "not_found") {
         res.status(404).json({ error: "not_found" });

@@ -64,7 +64,7 @@ class BootstrapDataSnapshot:
 
 
 def fetch_bootstrap_data_snapshot() -> BootstrapDataSnapshot:
-    """指数、成分与权重、流通股本表、行情、最新成分上是否具备申万一级行业。"""
+    """指数、成分与权重、自由流通股本表、行情、最新成分上是否具备申万一级行业。"""
     with connect() as conn:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute(
@@ -127,7 +127,7 @@ def bootstrap_gap_reasons(s: BootstrapDataSnapshot) -> list[str]:
     if s.n_constituents < 1:
         gaps.append("无指数成分 index_constituents")
     if s.n_share_premarket < 1:
-        gaps.append("无流通股本 share_premarket（daily_basic float_share）")
+        gaps.append("无自由流通股本 share_premarket（daily_basic free_share）")
     if s.n_quotes < 1:
         gaps.append("无行情数据 quotes_daily / quotes_rt（须 daily 或 rt_k 灌库）")
     if s.n_latest_constituent_codes > 0 and s.n_constituent_codes_with_sw_l1 < 1:

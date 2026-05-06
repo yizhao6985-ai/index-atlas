@@ -17,13 +17,13 @@ _log = logging.getLogger(__name__)
 
 
 def run_full_bootstrap(log: logging.Logger | None = None) -> None:
-    """最新指数成分 → 最新申万 → 最新流通股本 → quotes_daily 约 N 个交易日 → 时间窗预计算行。"""
+    """最新指数成分 → 最新申万 → 最新自由流通股本 → quotes_daily 约 N 个交易日 → 时间窗预计算行。"""
     lg = log or _log
     lg.info("灌库 1/5 index_weight（指数最新成分与权重）")
     sync_index_weight()
     lg.info("灌库 2/5 申万行业（最新分类与成分）→ stocks.sw_*")
     sync_shenwan_industries_full()
-    lg.info("灌库 3/5 daily_basic → share_premarket（最新流通股本）")
+    lg.info("灌库 3/5 daily_basic → share_premarket（最新自由流通股本 free_share）")
     sync_share_float_daily_basic()
     lg.info(
         "灌库 4/5 daily(doc 27) 回填约 %s 个交易日 → quotes_daily，"

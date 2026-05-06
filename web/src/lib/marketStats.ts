@@ -3,7 +3,7 @@ import type { ConstituentQuoteRow } from "@/api/generated/types.gen";
 import { bucketKeyForPct } from "@/lib/colors";
 
 /**
- * 流通市值原值在库内为**元**（`calc_circ_mv` = 流通股本(万股)×10000×收盘价），
+ * 热力图用的 circ_mv 原值在库内为**元**（free_share 万股×10000×收盘价），
  * 全市场合计转「万亿元」：元 / 1e12。
  */
 export function totalCircMvToTrillionYuan(sumYuan: number): number {
@@ -29,7 +29,7 @@ export interface MarketSummary {
   flatCount: number;
   /** 无涨跌幅 */
   naPctCount: number;
-  /** 成分流通市值合计，单位：元 */
+  /** 成分自由流通市值合计，单位：元 */
   totalCircMvWan: number;
   /** 成分成交额合计，单位：千元 */
   totalAmountQian: number;

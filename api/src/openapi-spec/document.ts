@@ -4,7 +4,7 @@ import { openApiGenerator } from "./setup.js";
 const INFO_DESCRIPTION = [
   "BFF for A-share index constituents + quotes（成分股 + 行情）。",
   "历史日线在 `quotes_daily`，实时 `rt_k` 在 `quotes_rt`。",
-  "`/api/indices/{code}/market` 返回原始行；热力图面积与聚合由前端按 `metric` 计算。",
+  "`/api/indices/{code}/market` 返回原始行；热力图聚合由前端按 `metric` 计算，可选 `sortBy`（与 `metric` 同枚举）对 `rows` 排序。",
   "JSON 字段为 camelCase；业务类型由 `src/openapi/` 下 Zod `z.infer` 与 schema 同源。",
   "交互式文档：`/api/docs`；规范下载：`/api/openapi.json`。",
   "本规范由 `src/openapi/` 内 Zod + `@asteasolutions/zod-to-openapi` 生成。",

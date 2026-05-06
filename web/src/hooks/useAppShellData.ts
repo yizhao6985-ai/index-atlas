@@ -9,7 +9,7 @@ import { formatDataAsOf } from "@/lib/formatDate";
  * 壳层用到的指数列表 + 大盘 RT 行情，以及默认指数初始化、市场加载失败时弹窗提示。
  */
 export function useAppShellData() {
-  const { indexCode, setIndexCode, isTrading } = useAppState();
+  const { indexCode, setIndexCode, isTrading, metric } = useAppState();
 
   const indexInitRef = useRef(false);
   const { data: indicesData } = useQuery({
@@ -32,9 +32,12 @@ export function useAppShellData() {
   }, [indicesData?.defaultCode, setIndexCode]);
 
   const marketQuery = useQuery({
-    queryKey: ["market", "rt", indexCode],
+    queryKey: ["market", "rt", indexCode, metric],
     queryFn: async () => {
-      const res = await getMarketSnapshotRt({ path: { code: indexCode } });
+      const res = await getMarketSnapshotRt({
+        path: { code: indexCode },
+        query: { sortBy: metric },
+      });
       if (res.error) throw new Error(`market/rt ${JSON.stringify(res.error)}`);
       if (res.data === undefined) throw new Error("market/rt: empty body");
       return res.data;

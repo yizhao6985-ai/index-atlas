@@ -1,4 +1,4 @@
-"""同步任务共用：日期/数值解析、成分代码集合、股本与涨跌幅计算等。"""
+"""同步任务共用：日期/数值解析、成分代码集合、自由流通股本与涨跌幅计算等。"""
 
 from __future__ import annotations
 
@@ -48,11 +48,11 @@ def calc_pct(pre_close: Decimal | None, close: Decimal | None) -> Decimal | None
     return (close - pre_close) / pre_close * Decimal(100)
 
 
-def calc_circ_mv(float_share_wan: Decimal | None, close: Decimal | None) -> Decimal | None:
-    """流通市值（元）= float_share(万股) × 10000 × close(元/股)；与 Tushare daily_basic 的 circ_mv(万元) 不是同一口径。"""
-    if float_share_wan is None or close is None:
+def calc_circ_mv(free_share_wan: Decimal | None, close: Decimal | None) -> Decimal | None:
+    """自由流通市值（元）= free_share(万股) × 10000 × close(元/股)；非 Tushare daily_basic.circ_mv(万元) 口径。"""
+    if free_share_wan is None or close is None:
         return None
-    return float_share_wan * Decimal(10000) * close
+    return free_share_wan * Decimal(10000) * close
 
 
 def chunks(seq: list[str], n: int) -> list[list[str]]:

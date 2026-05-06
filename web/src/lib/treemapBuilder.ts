@@ -7,7 +7,7 @@ export interface TreemapNode {
   value?: number;
   tsCode?: string | null;
   pctChange?: number | null;
-  /** 流通市值（万元），仅叶子 */
+  /** 自由流通市值（元），仅叶子 */
   circMv?: number | null;
   /** 成交额（千元），仅叶子 */
   amount?: number | null;

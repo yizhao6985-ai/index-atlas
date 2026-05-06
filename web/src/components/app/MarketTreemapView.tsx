@@ -13,9 +13,12 @@ export default function MarketTreemapView() {
   const { indexCode, metric, isTrading } = useAppState();
 
   const marketQuery = useQuery({
-    queryKey: ["market", "rt", indexCode],
+    queryKey: ["market", "rt", indexCode, metric],
     queryFn: async () => {
-      const res = await getMarketSnapshotRt({ path: { code: indexCode } });
+      const res = await getMarketSnapshotRt({
+        path: { code: indexCode },
+        query: { sortBy: metric },
+      });
       if (res.error) throw new Error(`market/rt ${JSON.stringify(res.error)}`);
       if (res.data === undefined) throw new Error("market/rt: empty body");
       return res.data;
