@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
   useContext,
@@ -9,6 +10,10 @@ import {
 
 import type { Metric } from "@/lib/metric";
 import { isTradingSessionSimple } from "@/lib/tradingSession";
+
+type TradingSessionPayload = {
+  continuousAuction: boolean;
+};
 
 type AppStateValue = {
   indexCode: string;
@@ -29,15 +34,33 @@ export function useAppState(): AppStateValue {
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [indexCode, setIndexCode] = useState("000985.SH");
   const [metric, setMetric] = useState<Metric>("mcap");
-  const [isTrading, setIsTrading] = useState(() => isTradingSessionSimple());
 
+  /** BFF 不可用时退回：仅剔除周末与上海墙钟，不含法定节假日与 SSE trade_calendar */
+  const [clientFallbackTrading, setClientFallbackTrading] = useState(() =>
+    isTradingSessionSimple(),
+  );
   useEffect(() => {
     const id = window.setInterval(
-      () => setIsTrading(isTradingSessionSimple()),
-      30_000,
+      () => setClientFallbackTrading(isTradingSessionSimple()),
+      60_000,
     );
-    return () => clearInterval(id);
+    return () => window.clearInterval(id);
   }, []);
+
+  const sessionQuery = useQuery({
+    queryKey: ["api", "session"],
+    queryFn: async (): Promise<TradingSessionPayload> => {
+      const res = await fetch("/api/session");
+      if (!res.ok) throw new Error(`session_http_${res.status}`);
+      return res.json();
+    },
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    retry: 1,
+  });
+
+  const isTrading =
+    sessionQuery.data?.continuousAuction ?? clientFallbackTrading;
 
   const value = useMemo(
     () => ({
@@ -51,8 +74,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AppStateContext.Provider value={value}>
-      {children}
-    </AppStateContext.Provider>
+    <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
   );
 }

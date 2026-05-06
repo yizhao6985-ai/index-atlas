@@ -39,6 +39,7 @@ def invalidate_trading_day_cache() -> None:
 def today_sse_is_trading_day(now: datetime.datetime | None = None) -> bool:
     """本自然日是否 A 股开市（SSE trade_cal is_open=1）。无库记录时退回 chinese_calendar 工作日。
     同一自然日内结果内存缓存，减少 10s 轮询下的数据库访问。"""
+    global _trading_day_cache
     if now is None:
         d = today_trade_date()
     else:

@@ -140,6 +140,28 @@ export type HealthOk = {
     ok: boolean;
 };
 
+/**
+ * GET /api/session 成功响应体
+ */
+export type TradingSessionResponse = {
+    /**
+     * 是否处于连续竞价刷新窗口：SSE 日历当日开市 + 09:30–11:30、13:00–15:00（上海墙钟）。与盘中 rt_k 条件对齐。
+     */
+    continuousAuction: boolean;
+    /**
+     * SSE `trade_calendar.is_open=1`，无行时退回为非周末近似
+     */
+    sseOpenDay: boolean;
+    /**
+     * 是否在库内命中 `trade_calendar` 当日行（未命中时退回规则较粗）
+     */
+    tradeCalendarHit: boolean;
+    /**
+     * 判断所使用的上海自然日 YYYY-MM-DD
+     */
+    shanghaiDate: string;
+};
+
 export type HealthData = {
     body?: never;
     path?: never;
@@ -155,6 +177,31 @@ export type HealthResponses = {
 };
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
+
+export type GetTradingSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/session';
+};
+
+export type GetTradingSessionErrors = {
+    /**
+     * 查询失败
+     */
+    500: ErrorBody;
+};
+
+export type GetTradingSessionError = GetTradingSessionErrors[keyof GetTradingSessionErrors];
+
+export type GetTradingSessionResponses = {
+    /**
+     * 当前会话形态
+     */
+    200: TradingSessionResponse;
+};
+
+export type GetTradingSessionResponse = GetTradingSessionResponses[keyof GetTradingSessionResponses];
 
 export type ListIndicesData = {
     body?: never;

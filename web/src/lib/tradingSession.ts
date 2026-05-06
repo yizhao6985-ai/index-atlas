@@ -1,6 +1,6 @@
 /**
- * Browser-side session check (Asia/Shanghai).
- * Weekends off; **does not** exclude CN public holidays (learning project; worker uses chinese-calendar).
+ * 浏览器端兜底：无 BFF `/api/session` 时使用（离线、构建预览等）。
+ * 仅剔除周末与上海墙钟时段；不含 SSE `trade_calendar` / 法定节假日，可能与实际开市不一致。
  */
 export function isTradingSessionSimple(): boolean {
   const now = new Date();

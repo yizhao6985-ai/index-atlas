@@ -10,6 +10,7 @@ import type pg from "pg";
 import { getOpenApiDocument } from "./openapi.js";
 import { healthRouter } from "./routes/health.js";
 import { createIndicesRouter } from "./routes/indices.js";
+import { createSessionRouter } from "./routes/session.js";
 
 /** 组装完整 BFF；OpenAPI 由 `openapi-spec/` + 入口 `openapi.ts` 生成。 */
 export function createApp(pool: pg.Pool) {
@@ -30,6 +31,7 @@ export function createApp(pool: pg.Pool) {
   );
 
   app.use("/health", healthRouter);
+  app.use("/api", createSessionRouter(pool));
   app.use("/api/indices", createIndicesRouter(pool));
 
   return app;

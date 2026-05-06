@@ -18,8 +18,8 @@ export default function UsageHelpModal({ open, onClose }: UsageHelpModalProps) {
     >
       <ul className="m-0 list-disc space-y-2.5 pl-5 text-sm leading-relaxed text-slate-700">
         <li>
-          <strong>云图</strong>：按申万行业 <strong>L1 → L2 → L3 → 个股</strong>{" "}
-          逐级下钻；点击空白或面包屑可返回上一级。
+          <strong>云图</strong>：申万 <strong>L1 → L2 → L3 → 个股</strong>{" "}
+          自外向内嵌套成一块热力图，<strong>面积</strong>为当前指标；悬停可看行业路径与行情摘要。仅<strong>个股</strong>在已配置雪球时可<strong>点击方块</strong>打开新页。
         </li>
         <li>
           <strong>矩形面积</strong>：表示当前选择的指标——

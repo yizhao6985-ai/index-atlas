@@ -8,8 +8,10 @@ import { registerIndicesComponentSchemas } from "./schemas/indices.js";
 import { registerMarketComponentSchemas } from "./schemas/market.js";
 import { registerHealthPath } from "./paths/health.js";
 import { registerListIndicesPath } from "./paths/indices.js";
+import { registerTradingSessionPath } from "./paths/session.js";
 import { registerMarketSnapshotRtPath } from "./paths/market-rt.js";
 import { registerMarketSnapshotPath } from "./paths/market.js";
+import { registerTradingSessionResponseSchema } from "./schemas/session.js";
 import { registry } from "./registry.js";
 import { z } from "./zod.js";
 
@@ -17,8 +19,10 @@ const ErrorBodySchema = registerErrorBodySchema(registry);
 const { IndicesResponseSchema } = registerIndicesComponentSchemas(registry);
 const { MarketSnapshotResponseSchema } = registerMarketComponentSchemas(registry);
 const HealthOkSchema = registerHealthOkSchema(registry);
+const TradingSessionResponseSchema = registerTradingSessionResponseSchema(registry);
 
 registerHealthPath(registry, HealthOkSchema);
+registerTradingSessionPath(registry, { TradingSessionResponseSchema, ErrorBodySchema });
 registerListIndicesPath(registry, { IndicesResponseSchema, ErrorBodySchema });
 registerMarketSnapshotPath(registry, { MarketSnapshotResponseSchema, ErrorBodySchema });
 registerMarketSnapshotRtPath(registry, { MarketSnapshotResponseSchema, ErrorBodySchema });
