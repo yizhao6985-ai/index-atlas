@@ -1,7 +1,7 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import type { z } from "zod";
 
-export function registerListIndicesPath(
+export function registerIndicesCatalogPath(
   registry: OpenAPIRegistry,
   schemas: {
     IndicesResponseSchema: z.ZodType;
@@ -11,9 +11,9 @@ export function registerListIndicesPath(
   const { IndicesResponseSchema, ErrorBodySchema } = schemas;
   registry.registerPath({
     method: "get",
-    path: "/api/indices",
-    operationId: "listIndices",
-    summary: "指数列表",
+    path: "/api/indices/catalog",
+    operationId: "getIndicesCatalog",
+    summary: "可选指数目录（供前端列表/切换）",
     tags: ["Indices"],
     responses: {
       200: {

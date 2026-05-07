@@ -8,28 +8,23 @@ const SHENWAN_IN_SELECT = `
   s.sw_l3_name AS "swL3Name"
 `;
 
-/**
- * 时间窗预计算行（1d/7d/30d 交易日，见 market_constituent_rollups，由 worker 灌库/晚盘写）
- */
-export const MARKET_ROLLUP_SQL = `
-SELECT
-  m.con_code AS "tsCode",
-  COALESCE(NULLIF(TRIM(s.name), ''), m.con_code) AS "name",
-  m.circ_mv AS "circMv",
-  m.amount AS "amount",
-  m.pct_change AS "pctChange",
-  m.snapshot_at AS "snapshotAt",
-  m.trade_date::date AS "tradeDate",
-  m.weight AS "weight",
-  ${SHENWAN_IN_SELECT}
-FROM market_constituent_rollups m
-JOIN indices i ON i.id = m.index_id
-LEFT JOIN stocks s ON s.ts_code = m.con_code
-WHERE i.code = $1 AND m.window_code = $2
+/** 当前指数最新一批成分是否在 quotes_rt 中至少有一条（决定是否走 rt 合并）。 */
+export const MARKET_SQL_QUOTES_RT_EXISTS_FOR_INDEX = `
+SELECT EXISTS (
+  SELECT 1
+  FROM quotes_rt q
+  INNER JOIN index_constituents ic ON ic.con_code = q.stock_code
+  INNER JOIN indices i ON i.id = ic.index_id AND i.code = $1
+  INNER JOIN (
+    SELECT MAX(ic2.trade_date) AS td
+    FROM index_constituents ic2
+    INNER JOIN indices i2 ON i2.id = ic2.index_id AND i2.code = $1
+  ) mx ON ic.trade_date = mx.td
+  LIMIT 1
+) AS has_rt
 `;
 
-/** 最新成分；默认优先 quotes_rt；同一自然日若 quotes_daily 快照更新则改用日线（与晚盘先落库日线再 TRUNCATE rt 之间一致） */
-export const MARKET_SQL_LIVE = `
+const LIVE_BASE_CTES = `
 WITH idx AS (
   SELECT id, code FROM indices WHERE code = $1
 ),
@@ -44,68 +39,45 @@ const_rows AS (
   JOIN idx ON ic.index_id = idx.id
   JOIN const_date cd ON ic.trade_date = cd.td
 ),
-/* 同一 trade_date 下若 quotes_daily 已更新且 snapshot 晚于 quotes_rt，用日线（收盘口径）；
-   否则仍优先 rt：避免「晚盘已落库日线、尚未 TRUNCATE rt」时顶栏仍显示盘中较早「数据截至」。 */
 q_rt AS (
-  SELECT DISTINCT ON (stock_code)
-    stock_code,
-    trade_date,
-    snapshot_at,
-    circ_mv,
-    amount,
-    pct_change
-  FROM quotes_rt
-  ORDER BY stock_code, trade_date DESC, snapshot_at DESC
+  SELECT DISTINCT ON (q.stock_code)
+    q.stock_code,
+    q.trade_date,
+    q.snapshot_at,
+    q.circ_mv,
+    q.amount,
+    q.pct_change
+  FROM quotes_rt q
+  INNER JOIN const_rows cr ON cr.con_code = q.stock_code
+  ORDER BY q.stock_code, q.trade_date DESC, q.snapshot_at DESC
 ),
 q_d AS (
-  SELECT DISTINCT ON (stock_code)
-    stock_code,
-    trade_date,
-    snapshot_at,
-    circ_mv,
-    amount,
-    pct_change
-  FROM quotes_daily
-  ORDER BY stock_code, trade_date DESC, snapshot_at DESC
+  SELECT DISTINCT ON (qd.stock_code)
+    qd.stock_code,
+    qd.trade_date,
+    qd.snapshot_at,
+    qd.circ_mv,
+    qd.amount,
+    qd.pct_change
+  FROM quotes_daily qd
+  INNER JOIN const_rows cr ON cr.con_code = qd.stock_code
+  ORDER BY qd.stock_code, qd.trade_date DESC, qd.snapshot_at DESC
 )
+`;
+
+/**
+ * 当前指数这组成分里至少一只在 quotes_rt 有快照时启用：每只成分若有 rt 则仅用 rt，否则退回 quotes_daily。
+ */
+export const MARKET_SQL_RT_MERGE = `
+${LIVE_BASE_CTES}
 SELECT
   c.con_code AS "tsCode",
   COALESCE(NULLIF(TRIM(s.name), ''), c.con_code) AS "name",
-  CASE
-    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
-      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
-      THEN qd.circ_mv
-    WHEN rt.stock_code IS NOT NULL THEN rt.circ_mv
-    ELSE qd.circ_mv
-  END AS "circMv",
-  CASE
-    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
-      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
-      THEN qd.amount
-    WHEN rt.stock_code IS NOT NULL THEN rt.amount
-    ELSE qd.amount
-  END AS "amount",
-  CASE
-    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
-      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
-      THEN qd.pct_change
-    WHEN rt.stock_code IS NOT NULL THEN rt.pct_change
-    ELSE qd.pct_change
-  END AS "pctChange",
-  CASE
-    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
-      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
-      THEN qd.snapshot_at
-    WHEN rt.stock_code IS NOT NULL THEN rt.snapshot_at
-    ELSE qd.snapshot_at
-  END AS "snapshotAt",
-  CASE
-    WHEN rt.stock_code IS NOT NULL AND qd.stock_code IS NOT NULL
-      AND rt.trade_date = qd.trade_date AND qd.snapshot_at > rt.snapshot_at
-      THEN qd.trade_date
-    WHEN rt.stock_code IS NOT NULL THEN rt.trade_date
-    ELSE qd.trade_date
-  END AS "tradeDate",
+  CASE WHEN rt.stock_code IS NOT NULL THEN rt.circ_mv ELSE qd.circ_mv END AS "circMv",
+  CASE WHEN rt.stock_code IS NOT NULL THEN rt.amount ELSE qd.amount END AS "amount",
+  CASE WHEN rt.stock_code IS NOT NULL THEN rt.pct_change ELSE qd.pct_change END AS "pctChange",
+  CASE WHEN rt.stock_code IS NOT NULL THEN rt.snapshot_at ELSE qd.snapshot_at END AS "snapshotAt",
+  CASE WHEN rt.stock_code IS NOT NULL THEN rt.trade_date ELSE qd.trade_date END AS "tradeDate",
   c.weight AS "weight",
   ${SHENWAN_IN_SELECT}
 FROM const_rows c
@@ -115,46 +87,24 @@ LEFT JOIN q_d qd ON qd.stock_code = c.con_code
 WHERE rt.stock_code IS NOT NULL OR qd.stock_code IS NOT NULL
 `;
 
-/** 历史某日：仅 quotes_daily，成分仍为当前最新一批（与 live 一致） */
-export const MARKET_SQL_HISTORICAL = `
-WITH idx AS (
-  SELECT id, code FROM indices WHERE code = $1
-),
-const_date AS (
-  SELECT MAX(ic.trade_date) AS td
-  FROM index_constituents ic
-  JOIN idx ON ic.index_id = idx.id
-),
-const_rows AS (
-  SELECT ic.con_code, ic.weight
-  FROM index_constituents ic
-  JOIN idx ON ic.index_id = idx.id
-  JOIN const_date cd ON ic.trade_date = cd.td
-),
-qh AS (
-  SELECT
-    stock_code,
-    trade_date,
-    snapshot_at,
-    circ_mv,
-    amount,
-    pct_change
-  FROM quotes_daily
-  WHERE trade_date = $2::date
-)
+/**
+ * `quotes_rt` 已清空（如晚盘 TRUNCATE 后）：仅使用每只成分 quotes_daily **最新交易日**一行，即当日收盘落库结果。
+ */
+export const MARKET_SQL_DAILY_FALLBACK = `
+${LIVE_BASE_CTES}
 SELECT
   c.con_code AS "tsCode",
   COALESCE(NULLIF(TRIM(s.name), ''), c.con_code) AS "name",
-  q.circ_mv AS "circMv",
-  q.amount AS "amount",
-  q.pct_change AS "pctChange",
-  q.snapshot_at AS "snapshotAt",
-  q.trade_date AS "tradeDate",
+  qd.circ_mv AS "circMv",
+  qd.amount AS "amount",
+  qd.pct_change AS "pctChange",
+  qd.snapshot_at AS "snapshotAt",
+  qd.trade_date AS "tradeDate",
   c.weight AS "weight",
   ${SHENWAN_IN_SELECT}
 FROM const_rows c
 LEFT JOIN stocks s ON s.ts_code = c.con_code
-JOIN qh q ON q.stock_code = c.con_code
+INNER JOIN q_d qd ON qd.stock_code = c.con_code
 `;
 
 /** 主查询无行时打日志用：该指数下成分数、全库行情行数、成分/日线的最大日期 */

@@ -36,7 +36,7 @@ from app.bootstrap_pipeline import run_full_bootstrap  # noqa: E402
 
 def main() -> None:
     run_full_bootstrap(log)
-    log.info("done; 可重启 API，并 GET /api/indices/000985.SH/market")
+    log.info("done; 可重启 API，并 GET /api/indices/000985.SH/market/rt")
 
 
 if __name__ == "__main__":

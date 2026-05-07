@@ -10,7 +10,6 @@ from app.trade_calendar_sync import (
     today_sse_is_trading_day,
 )
 from app.shenwan_industry_sync import sync_shenwan_industries_full
-from app.market_rollups import sync_market_constituent_rollups
 from app.tushare_sync import (
     clear_quotes_rt,
     sync_index_weight,
@@ -58,10 +57,6 @@ def job_evening() -> None:
         sync_quotes_daily_latest_and_prune()
     except Exception:
         log.exception("evening sync: daily → quotes_daily failed")
-    try:
-        sync_market_constituent_rollups()
-    except Exception:
-        log.exception("evening sync: market rollups (1d/7d/30d) failed")
     try:
         clear_quotes_rt()
     except Exception:

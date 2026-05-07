@@ -76,7 +76,7 @@ export function registerMarketComponentSchemas(registry: OpenAPIRegistry) {
           .array(ConstituentQuoteRowSchema)
           .openapi({ description: "该指数下成分股行情行（原始行，热力图由前端再聚合）" }),
       })
-      .openapi({ description: "GET /api/indices/{code}/market 成功响应体" }),
+      .openapi({ description: "GET /api/indices/{code}/market/rt 成功响应体" }),
   );
 
   return { ConstituentQuoteRowSchema, MarketSnapshotResponseSchema };

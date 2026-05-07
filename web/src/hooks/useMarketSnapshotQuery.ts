@@ -1,34 +1,55 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
-import { getMarketSnapshot, getMarketSnapshotRt } from "@/api/generated/sdk.gen";
-import { useAppState } from "@/context/AppStateContext";
+import { getMarketSnapshotRt } from "@/api/generated/sdk.gen";
+import type { Metric } from "@/lib/metric";
+
+export type MarketRtQueryDeps = {
+  indexCode: string;
+  metric: Metric;
+  isTrading: boolean;
+  continuousAuction: boolean | undefined;
+  canRequestRt: boolean;
+};
+
+const RT_POLL_MS = 10_000;
 
 /**
- * 连续竞价：rt_k 路径（约 10s 刷新）；非连续竞价：1d 预计算 rollup（晚盘由 quotes_daily 重算，「数据截至」为入库/rollup 时间，而非盘中 rt 残留）。
+ * `GET …/market/rt`，须在 `canRequestRt === true` 后才会请求。
+ * 由 `AppStateProvider` 统一下发依赖；不要在子组件里重复订阅。
  */
-export function useMarketSnapshotQuery() {
-  const { indexCode, metric, isTrading } = useAppState();
-
-  return useQuery({
-    queryKey: ["market", isTrading ? "rt" : "1d", indexCode, metric],
+export function useMarketSnapshotQueryFromDeps({
+  indexCode,
+  metric,
+  isTrading,
+  continuousAuction,
+  canRequestRt,
+}: MarketRtQueryDeps) {
+  const q = useQuery({
+    queryKey: ["market", "live", indexCode, metric],
+    enabled: canRequestRt,
     queryFn: async () => {
-      if (isTrading) {
-        const res = await getMarketSnapshotRt({
-          path: { code: indexCode },
-          query: { sortBy: metric },
-        });
-        if (res.error) throw new Error(`market/rt ${JSON.stringify(res.error)}`);
-        if (res.data === undefined) throw new Error("market/rt: empty body");
-        return res.data;
-      }
-      const res = await getMarketSnapshot({
+      const res = await getMarketSnapshotRt({
         path: { code: indexCode },
-        query: { window: "1d", sortBy: metric },
+        query: { sortBy: metric },
       });
-      if (res.error) throw new Error(`market ${JSON.stringify(res.error)}`);
-      if (res.data === undefined) throw new Error("market: empty body");
+      if (res.error) throw new Error(`market/rt ${JSON.stringify(res.error)}`);
+      if (res.data === undefined) throw new Error("market/rt: empty body");
       return res.data;
     },
-    refetchInterval: () => (isTrading ? 10_000 : false),
+    refetchInterval: isTrading ? RT_POLL_MS : false,
+    staleTime: isTrading ? 0 : Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: isTrading,
+    refetchOnReconnect: isTrading,
   });
+
+  const prevAuction = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (continuousAuction === undefined) return;
+    if (prevAuction.current === continuousAuction) return;
+    prevAuction.current = continuousAuction;
+    void q.refetch();
+  }, [continuousAuction, q.refetch]);
+
+  return q;
 }

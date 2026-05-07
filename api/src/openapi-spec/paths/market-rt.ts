@@ -2,7 +2,7 @@ import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import type { z } from "zod";
 import { z as zod } from "../zod.js";
 
-/** 仅 quotes_rt 的实时（盘中）行情，结构同 getMarketSnapshot */
+/** `GET …/market/rt` OpenAPI 注册 */
 export function registerMarketSnapshotRtPath(
   registry: OpenAPIRegistry,
   schemas: { MarketSnapshotResponseSchema: z.ZodType; ErrorBodySchema: z.ZodType },
@@ -12,9 +12,9 @@ export function registerMarketSnapshotRtPath(
     method: "get",
     path: "/api/indices/{code}/market/rt",
     operationId: "getMarketSnapshotRt",
-    summary: "指定指数成分行情（实时：rt 优先，否则当日 daily）",
+    summary: "指定指数成分行情（rt 优先；无 rt 时用日线）",
     description:
-      "与 `/market` 的 live 一致：优先 `quotes_rt` 最新一行；晚盘清空 `quotes_rt` 后回退为 `quotes_daily` 当日收盘。返回体结构同 getMarketSnapshot。支持 `sortBy`/`sortOrder` 对 `rows` 按面积维度排序。",
+      "先判断「指数当前这批成分」在 `quotes_rt` 是否至少有一条：`q_rt`/`q_d` CTE 仅聚合这批代码；若至少有 rt，则各行有 rt 用 rt、否则 `quotes_daily` 补缺；若这批成分暂无 rt（或整体清库），则仅用 `quotes_daily` 各自最新交易日。不支持「日线覆盖同期 rt」。支持 `sortBy`/`sortOrder`。",
     tags: ["Market"],
     request: {
       params: zod.object({

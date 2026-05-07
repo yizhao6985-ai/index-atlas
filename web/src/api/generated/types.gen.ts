@@ -33,7 +33,7 @@ export type Index = {
 };
 
 /**
- * GET /api/indices 成功响应体
+ * `GET /api/indices/catalog` 成功响应体
  */
 export type IndicesResponse = {
     /**
@@ -109,7 +109,7 @@ export type ConstituentQuoteRow = {
 };
 
 /**
- * GET /api/indices/{code}/market 成功响应体
+ * GET /api/indices/{code}/market/rt 成功响应体
  */
 export type MarketSnapshotResponse = {
     /**
@@ -145,21 +145,21 @@ export type HealthOk = {
  */
 export type TradingSessionResponse = {
     /**
-     * 是否处于连续竞价刷新窗口：SSE 日历当日开市 + 09:30–11:30、13:00–15:00（上海墙钟）。与盘中 rt_k 条件对齐。
+     * 当前是否处在连续竞价：SSE `trade_calendar` 当日开市 + 上海墙钟 09:30–11:30、13:00–15:00（整分口径与 worker/rt_k 一致）。
      */
     continuousAuction: boolean;
     /**
-     * SSE `trade_calendar.is_open=1`，无行时退回为非周末近似
+     * 仅在 continuousAuction=true 时有值：距本轮连续竞价结束（午休或 15:00 后一整分）还有多少毫秒；否则 null。
      */
-    sseOpenDay: boolean;
+    msUntilCurrentAuctionEnd: number | null;
     /**
-     * 是否在库内命中 `trade_calendar` 当日行（未命中时退回规则较粗）
+     * 仅在 continuousAuction=false 时有意义：距下一段连续竞价开始还有多少毫秒（盘前/午休/盘后/非交易日）；盘中为 null。
      */
-    tradeCalendarHit: boolean;
+    msUntilNextAuctionStart: number | null;
     /**
-     * 判断所使用的上海自然日 YYYY-MM-DD
+     * 下一「连续竞价状态可能变化」的绝对时刻（UTC ISO8601）。客户端应在此前后再次调用本接口以便切换对 market/rt 的轮询。
      */
-    shanghaiDate: string;
+    nextSessionBoundaryAt: string;
 };
 
 export type HealthData = {
@@ -203,85 +203,30 @@ export type GetTradingSessionResponses = {
 
 export type GetTradingSessionResponse = GetTradingSessionResponses[keyof GetTradingSessionResponses];
 
-export type ListIndicesData = {
+export type GetIndicesCatalogData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/indices';
+    url: '/api/indices/catalog';
 };
 
-export type ListIndicesErrors = {
+export type GetIndicesCatalogErrors = {
     /**
      * 数据库错误
      */
     500: ErrorBody;
 };
 
-export type ListIndicesError = ListIndicesErrors[keyof ListIndicesErrors];
+export type GetIndicesCatalogError = GetIndicesCatalogErrors[keyof GetIndicesCatalogErrors];
 
-export type ListIndicesResponses = {
+export type GetIndicesCatalogResponses = {
     /**
      * 成功返回指数列表与默认指数代码
      */
     200: IndicesResponse;
 };
 
-export type ListIndicesResponse = ListIndicesResponses[keyof ListIndicesResponses];
-
-export type GetMarketSnapshotData = {
-    body?: never;
-    path: {
-        /**
-         * 指数代码（路径参数，如 000985.SH）
-         */
-        code: string;
-    };
-    query?: {
-        /**
-         * 若指定：仅该日期的 quotes_daily 快照，且忽略 `window`；不指定时读预计算行 + `window`
-         */
-        tradeDate?: string;
-        /**
-         * 与 `tradeDate` 二选一：未传 `tradeDate` 时生效。预计算时间窗：1/7/30 个交易日。默认 1d
-         */
-        window?: '1d' | '7d' | '30d';
-        /**
-         * 按面积维度对 `rows` 排序：`weight` 成分权重、`turnover` 成交额（千元）、`mcap` 自由流通市值（元）；不传则保持 SQL 顺序
-         */
-        sortBy?: 'weight' | 'turnover' | 'mcap';
-        /**
-         * 与 `sortBy` 联用；默认 `desc`（数值从大到小，null 靠后）
-         */
-        sortOrder?: 'asc' | 'desc';
-    };
-    url: '/api/indices/{code}/market';
-};
-
-export type GetMarketSnapshotErrors = {
-    /**
-     * tradeDate、window 或 sort 相关参数非法
-     */
-    400: ErrorBody;
-    /**
-     * 未知指数代码
-     */
-    404: ErrorBody;
-    /**
-     * 数据库错误
-     */
-    500: ErrorBody;
-};
-
-export type GetMarketSnapshotError = GetMarketSnapshotErrors[keyof GetMarketSnapshotErrors];
-
-export type GetMarketSnapshotResponses = {
-    /**
-     * 成功返回该指数下成分与行情行
-     */
-    200: MarketSnapshotResponse;
-};
-
-export type GetMarketSnapshotResponse = GetMarketSnapshotResponses[keyof GetMarketSnapshotResponses];
+export type GetIndicesCatalogResponse = GetIndicesCatalogResponses[keyof GetIndicesCatalogResponses];
 
 export type GetMarketSnapshotRtData = {
     body?: never;

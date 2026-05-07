@@ -1,5 +1,5 @@
 /**
- * 指数列表：读 `indices` 表，与 OpenAPI `listIndices` 及生成类型一致。
+ * 指数目录：读 `indices` 表，与 OpenAPI `getIndicesCatalog` 及生成类型一致。
  */
 import type pg from "pg";
 

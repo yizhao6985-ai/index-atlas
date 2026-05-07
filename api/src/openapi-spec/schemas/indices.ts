@@ -31,7 +31,7 @@ export function registerIndicesComponentSchemas(registry: OpenAPIRegistry) {
           .string()
           .openapi({ description: "前端默认选中的指数代码", example: "000985.SH" }),
       })
-      .openapi({ description: "GET /api/indices 成功响应体" }),
+      .openapi({ description: "`GET /api/indices/catalog` 成功响应体" }),
   );
 
   return { IndexSchema, IndicesResponseSchema };

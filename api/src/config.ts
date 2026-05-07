@@ -24,5 +24,5 @@ export { DATABASE_URL };
 /** 前端热力图默认选中的指数代码（与 `indices` 表及 OpenAPI 示例一致） */
 export const DEFAULT_CODE = "000985.SH";
 
-/** `/api/indices/:code/market` 进程内缓存存活时间（毫秒），可用 `BFF_CACHE_TTL_MS` 覆盖 */
+/** `/api/indices/:code/market/rt` 进程内缓存存活时间（毫秒），可用 `BFF_CACHE_TTL_MS` 覆盖 */
 export const BFF_CACHE_TTL_MS = Number(process.env.BFF_CACHE_TTL_MS ?? 4000);

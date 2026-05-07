@@ -1,22 +1,47 @@
 import type pg from "pg";
 
 import {
+  computeContinuousAuctionSchedule,
   getShanghaiSessionParts,
-  isContinuousAuctionWallClock,
   isWeekendWeekdayShort,
   shanghaiDateYYYYMMDD,
+  shanghaiMinuteOfDay,
+  type ContinuousAuctionSchedule,
 } from "../lib/shanghaiClock.js";
 
 const SSE = "SSE";
 
-export type TradingSessionPayload = {
-  /** 与 worker `job_rt_k` 一致：SSE 日历当日开市 + 连续竞价墙钟 */
-  continuousAuction: boolean;
-  sseOpenDay: boolean;
-  /** 是否在库内命中 `trade_calendar`（未命中时 `sseOpenDay` 退回为「非周末」近似） */
-  tradeCalendarHit: boolean;
-  shanghaiDate: string;
-};
+export type TradingSessionPayload = ContinuousAuctionSchedule;
+
+async function fetchNextOpenOnOrAfter(
+  pool: pg.Pool,
+  fromYmd: string,
+): Promise<string | null> {
+  const r = await pool.query<{ d: string }>(
+    `SELECT cal_date::text AS d
+     FROM trade_calendar
+     WHERE exchange = $1 AND is_open = 1 AND cal_date >= $2::date
+     ORDER BY cal_date ASC
+     LIMIT 1`,
+    [SSE, fromYmd],
+  );
+  return r.rows[0]?.d ?? null;
+}
+
+async function fetchNextOpenStrictAfter(
+  pool: pg.Pool,
+  afterYmd: string,
+): Promise<string | null> {
+  const r = await pool.query<{ d: string }>(
+    `SELECT cal_date::text AS d
+     FROM trade_calendar
+     WHERE exchange = $1 AND is_open = 1 AND cal_date > $2::date
+     ORDER BY cal_date ASC
+     LIMIT 1`,
+    [SSE, afterYmd],
+  );
+  return r.rows[0]?.d ?? null;
+}
 
 export async function getTradingSessionState(
   pool: pg.Pool,
@@ -24,9 +49,9 @@ export async function getTradingSessionState(
 ): Promise<TradingSessionPayload> {
   const shanghaiDate = shanghaiDateYYYYMMDD(now);
   const clock = getShanghaiSessionParts(now);
-  const inAuction = isContinuousAuctionWallClock(clock.hour, clock.minute);
+  const minuteOfDay = shanghaiMinuteOfDay(clock.hour, clock.minute);
 
-  const r = await pool.query<{ is_open: number }>(
+  const todayCal = await pool.query<{ is_open: number }>(
     `SELECT is_open
      FROM trade_calendar
      WHERE exchange = $1 AND cal_date = $2::date
@@ -34,20 +59,25 @@ export async function getTradingSessionState(
     [SSE, shanghaiDate],
   );
 
-  let tradeCalendarHit = false;
   let sseOpenDay = false;
 
-  if (r.rows.length > 0) {
-    tradeCalendarHit = true;
-    sseOpenDay = Number(r.rows[0].is_open) === 1;
+  if (todayCal.rows.length > 0) {
+    sseOpenDay = Number(todayCal.rows[0].is_open) === 1;
   } else {
     sseOpenDay = !isWeekendWeekdayShort(clock.weekdayShort);
   }
 
-  return {
-    continuousAuction: sseOpenDay && inAuction,
-    sseOpenDay,
-    tradeCalendarHit,
+  const [nextOnOrAfter, nextStrictAfter] = await Promise.all([
+    fetchNextOpenOnOrAfter(pool, shanghaiDate),
+    fetchNextOpenStrictAfter(pool, shanghaiDate),
+  ]);
+
+  return computeContinuousAuctionSchedule(
+    now,
     shanghaiDate,
-  };
+    minuteOfDay,
+    sseOpenDay,
+    nextOnOrAfter,
+    nextStrictAfter,
+  );
 }

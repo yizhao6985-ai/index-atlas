@@ -17,7 +17,7 @@ const input =
 /**
  * 生成物在 `src/api/generated/`（`types.gen.ts`、`sdk.gen.ts`、`client.gen.ts` 等）。
  * 业务代码在组件或其它模块中直接 import 生成的方法，例如：
- *   import { listIndices, getMarketSnapshotRt } from "@/api/generated/sdk.gen";
+ *   import { getIndicesCatalog, getMarketSnapshotRt } from "@/api/generated/sdk.gen";
  * 勿再包一层 `lib/api` 封装。`main.tsx` 里需先 `configureHeyApiClient()`。
  */
 export default defineConfig({

@@ -2,15 +2,19 @@ import AppHeader from "@/components/app/AppHeader";
 import DisclaimerBanner from "@/components/app/DisclaimerBanner";
 import MarketLoadErrorBar from "@/components/app/MarketLoadErrorBar";
 import MarketTreemapView from "@/components/app/MarketTreemapView";
-import { useAppShellData } from "@/hooks/useAppShellData";
 import { useAppState } from "@/context/AppStateContext";
 
 /** 全局壳：免责条、错误条、顶栏、treemap 主内容。 */
 export default function AppLayout() {
-  const { indexCode, setIndexCode, metric, setMetric, isTrading } =
-    useAppState();
-  const { indicesData, marketQuery, dataAsOfDisplay, tradeDate } =
-    useAppShellData();
+  const {
+    indexCode,
+    setIndexCode,
+    metric,
+    setMetric,
+    isTrading,
+    indicesData,
+    marketQuery,
+  } = useAppState();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-slate-100/90 pb-[env(safe-area-inset-bottom,0px)] sm:pt-[env(safe-area-inset-top,0px)]">
@@ -24,8 +28,7 @@ export default function AppLayout() {
         metric={metric}
         onMetricChange={setMetric}
         indicesData={indicesData}
-        tradeDate={tradeDate}
-        dataAsOfDisplay={dataAsOfDisplay}
+        marketSnapshot={marketQuery.data}
         isTrading={isTrading}
         marketIsRefetching={marketQuery.isRefetching}
         marketDataUpdatedAt={marketQuery.dataUpdatedAt}

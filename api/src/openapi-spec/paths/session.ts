@@ -11,8 +11,8 @@ export function registerTradingSessionPath(
     method: "get",
     path: "/api/session",
     operationId: "getTradingSession",
-    summary: "连续竞价会话（用于前端「交易中」与刷新节奏）",
-    tags: ["Meta"],
+    summary: "连续竞价状态与下一轮询锚点（驱动 market/rt 轮询节律）",
+    tags: ["Session"],
     responses: {
       200: {
         description: "当前会话形态",

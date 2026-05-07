@@ -7,10 +7,9 @@ import { registerHealthOkSchema } from "./schemas/health.js";
 import { registerIndicesComponentSchemas } from "./schemas/indices.js";
 import { registerMarketComponentSchemas } from "./schemas/market.js";
 import { registerHealthPath } from "./paths/health.js";
-import { registerListIndicesPath } from "./paths/indices.js";
+import { registerIndicesCatalogPath } from "./paths/indices.js";
 import { registerTradingSessionPath } from "./paths/session.js";
 import { registerMarketSnapshotRtPath } from "./paths/market-rt.js";
-import { registerMarketSnapshotPath } from "./paths/market.js";
 import { registerTradingSessionResponseSchema } from "./schemas/session.js";
 import { registry } from "./registry.js";
 import { z } from "./zod.js";
@@ -23,8 +22,7 @@ const TradingSessionResponseSchema = registerTradingSessionResponseSchema(regist
 
 registerHealthPath(registry, HealthOkSchema);
 registerTradingSessionPath(registry, { TradingSessionResponseSchema, ErrorBodySchema });
-registerListIndicesPath(registry, { IndicesResponseSchema, ErrorBodySchema });
-registerMarketSnapshotPath(registry, { MarketSnapshotResponseSchema, ErrorBodySchema });
+registerIndicesCatalogPath(registry, { IndicesResponseSchema, ErrorBodySchema });
 registerMarketSnapshotRtPath(registry, { MarketSnapshotResponseSchema, ErrorBodySchema });
 
 export const openApiGenerator = new OpenApiGeneratorV3(registry.definitions);
@@ -37,10 +35,10 @@ export const openApi = {
 } as const;
 
 /**
- * 与 `GET /api/indices` 的 JSON 体一致。字段见 `IndicesResponse` 与 `openApi.IndicesResponseSchema`。
+ * 与 `GET /api/indices/catalog` 的 JSON 体一致。字段见 `IndicesResponse` 与 `openApi.IndicesResponseSchema`。
  */
 export type IndicesResponse = z.infer<typeof IndicesResponseSchema>;
 /**
- * 与 `GET /api/indices/{code}/market` 的 JSON 体一致。字段见 `MarketSnapshotResponse` 与 `ConstituentQuoteRow`。
+ * 与 `GET /api/indices/{code}/market/rt` 的 JSON 体一致。字段见 `MarketSnapshotResponse` 与 `ConstituentQuoteRow`。
  */
 export type MarketSnapshotResponse = z.infer<typeof MarketSnapshotResponseSchema>;

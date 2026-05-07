@@ -11,7 +11,15 @@ import {
   totalAmountToYiYuan,
   totalCircMvToTrillionYuan,
 } from "@/lib/marketStats";
-import type { ConstituentQuoteRow, IndicesResponse } from "@/api/generated/types.gen";
+import type {
+  ConstituentQuoteRow,
+  IndicesResponse,
+  MarketSnapshotResponse,
+} from "@/api/generated/types.gen";
+import {
+  dataAsOfDisplayFromMarketRt,
+  tradeDateLabelFromMarketRt,
+} from "@/lib/marketRtSnapshot";
 
 const METRIC_OPTIONS: readonly (readonly [Metric, string])[] = [
   ["mcap", "自由流通市值"],
@@ -38,8 +46,8 @@ type AppHeaderProps = {
   metric: Metric;
   onMetricChange: (m: Metric) => void;
   indicesData: IndicesResponse | undefined;
-  tradeDate: string | null | undefined;
-  dataAsOfDisplay: string;
+  /** `GET …/market/rt` 响应体；顶栏「交易日」「数据截至」仅读其 `tradeDate` / `dataAsOf`。 */
+  marketSnapshot: MarketSnapshotResponse | undefined;
   isTrading: boolean;
   marketIsRefetching: boolean;
   marketDataUpdatedAt: number;
@@ -52,8 +60,7 @@ export default function AppHeader({
   metric,
   onMetricChange,
   indicesData,
-  tradeDate,
-  dataAsOfDisplay,
+  marketSnapshot,
   isTrading,
   marketIsRefetching,
   marketDataUpdatedAt,
@@ -137,6 +144,15 @@ export default function AppHeader({
 
   const hasRows = (marketRows?.length ?? 0) > 0;
 
+  const tradeDateLabel = useMemo(
+    () => tradeDateLabelFromMarketRt(marketSnapshot),
+    [marketSnapshot],
+  );
+  const dataAsOfDisplay = useMemo(
+    () => dataAsOfDisplayFromMarketRt(marketSnapshot),
+    [marketSnapshot],
+  );
+
   const metricSelectOptions = METRIC_OPTIONS.map(([val, label]) => ({
     value: val,
     label,
@@ -214,9 +230,9 @@ export default function AppHeader({
 
   const tagsAndStatusRow = (
     <Space size={[8, 6]} wrap align="start" className="w-full">
-      {tradeDate ? (
+      {tradeDateLabel ? (
         <Tag className="m-0 max-w-full border-slate-200 bg-slate-100 text-slate-700 text-[11px] sm:text-xs">
-          交易日 {tradeDate}
+          交易日 {tradeDateLabel}
         </Tag>
       ) : null}
       {dataAsOfDisplay ? (
