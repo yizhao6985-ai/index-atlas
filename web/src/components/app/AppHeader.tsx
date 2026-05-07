@@ -246,7 +246,7 @@ export default function AppHeader({
       ) : null}
       <Tag
         className={[
-          "m-0 inline-flex w-max min-w-0 max-w-full min-h-6 items-center justify-center gap-1.5 px-2 text-[11px] font-medium sm:min-w-[13rem] sm:text-sm",
+          "m-0 max-w-full text-[11px] sm:text-xs",
           isTrading
             ? "border-emerald-600 bg-emerald-600 text-white"
             : "border-amber-500 bg-amber-500 text-white",
@@ -257,10 +257,10 @@ export default function AppHeader({
           .join(" ")}
       >
         {isTrading && marketIsRefetching ? (
-          <Space size={4}>
-            <LoadingOutlined className="text-[13px]" />
-            <span>交易中 同步中</span>
-          </Space>
+          <>
+            <LoadingOutlined className="mr-1" />
+            交易中 同步中
+          </>
         ) : isTrading && justUpdated ? (
           "已更新 约 10s 刷新"
         ) : isTrading ? (
