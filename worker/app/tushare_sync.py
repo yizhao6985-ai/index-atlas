@@ -453,7 +453,11 @@ def sync_quotes_daily_latest_and_prune(for_date: datetime.date | None = None) ->
 
 
 def sync_quotes_daily_bootstrap_window() -> None:
-    """初始化：按工作日倒序向前尝试，直至成功写入配置数量的交易日（默认 30），最后裁剪保留 N 个交易日。"""
+    """初始化：从上海「今天」起**从新到旧**按工作日尝试 daily，直至成功写入 need 个交易日（默认 30）。
+
+    与旧版 `reversed(worklist)` 不同：优先保证**最近**若干交易日有数据；若当日 API 空或过滤后无行则跳过该日继续向更旧扫。
+    扫完 worklist 仍不足 need 则打 warning。最后按配置保留最近 N 个 distinct trade_date 并删更旧整日。
+    """
     code_filter = _daily_code_filter()
     if code_filter is not None and not code_filter:
         log.warning(
@@ -463,11 +467,12 @@ def sync_quotes_daily_bootstrap_window() -> None:
 
     need = settings.quotes_daily_bootstrap_trade_days
     scan_days = max(need + 30, 55)
+    # last_n_workdays_newest_first：顺序 [较新, …, 较旧]；直接顺序迭代即「从新到旧」
     worklist = last_n_workdays_newest_first(today_trade_date(), scan_days)
     pro = tushare_pro()
     free_share_map = _load_latest_free_share_map()
     loaded = 0
-    for try_d in reversed(worklist):
+    for try_d in worklist:
         if loaded >= need:
             break
         ds = try_d.strftime("%Y%m%d")
@@ -498,6 +503,13 @@ def sync_quotes_daily_bootstrap_window() -> None:
     if loaded == 0:
         log.warning(
             "daily(doc 27) bootstrap: no trading day data in last %s workdays",
+            scan_days,
+        )
+    elif loaded < need:
+        log.warning(
+            "daily(doc 27) bootstrap: only %s/%s trade days filled (scanned %s workdays newest→older)",
+            loaded,
+            need,
             scan_days,
         )
     prune_quotes_daily_to_retention()
