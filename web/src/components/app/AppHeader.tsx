@@ -1,4 +1,4 @@
-import { CloseOutlined, LoadingOutlined, MenuOutlined } from "@ant-design/icons";
+import { BarChartOutlined, CloseOutlined, LoadingOutlined, MenuOutlined } from "@ant-design/icons";
 import { Button, Col, Popover, Radio, Row, Select, Space, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -323,8 +323,9 @@ export default function AppHeader({
         >
           <button
             type="button"
-            className="min-h-10 shrink-0 cursor-pointer touch-manipulation border-0 bg-transparent p-0 text-left text-[10px] font-medium whitespace-nowrap text-[#1e293b] underline decoration-dotted underline-offset-2 sm:min-h-0 sm:text-[11px] hover:text-slate-900 active:opacity-80"
+            className="inline-flex min-h-10 shrink-0 cursor-pointer touch-manipulation items-center gap-1 border-0 bg-transparent p-0 text-left text-[10px] font-medium whitespace-nowrap text-[#1e293b] underline decoration-dotted underline-offset-2 sm:min-h-0 sm:text-[11px] hover:text-slate-900 active:opacity-80"
           >
+            <BarChartOutlined className="shrink-0 text-[13px] sm:text-[14px]" aria-hidden />
             涨跌统计
           </button>
         </Popover>
@@ -357,7 +358,10 @@ export default function AppHeader({
       </div>
       <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/5">
         <div className="border-b border-slate-100 bg-slate-50/80 px-3 py-2.5">
-          <h3 className="m-0 text-sm font-semibold text-slate-900">涨跌统计</h3>
+          <h3 className="m-0 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+            <BarChartOutlined className="text-base text-slate-500" aria-hidden />
+            涨跌统计
+          </h3>
         </div>
         <div className="px-2 pb-3 pt-2 sm:px-3">{statsChartsBlock}</div>
       </div>
@@ -369,14 +373,14 @@ export default function AppHeader({
       className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:gap-2.5"
       aria-label="涨跌图例：色块内为涨跌幅分档（%）"
     >
-      <div className="inline-flex h-5 shrink-0 items-center rounded-md bg-[#1e293b] px-1.5 text-[10px] font-medium leading-none text-white shadow-sm ring-1 ring-slate-900/20">
+      <div className="inline-flex h-5 shrink-0 items-center rounded-md bg-[#1e293b] px-1.5 text-[10px] font-medium leading-none text-white ring-1 ring-slate-900/20">
         当日涨跌幅
       </div>
       <div className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
         {LEGEND_BUCKETS.map((b) => (
           <span
             key={b.key}
-            className="inline-flex min-h-5 shrink-0 items-center justify-center rounded-sm border border-slate-900/25 px-1 py-0.5 text-center text-[8px] font-semibold leading-tight text-white shadow-sm [text-shadow:0_0_2px_rgb(0_0_0/0.75),0_1px_2px_rgb(0_0_0/0.55)] sm:px-1.5 sm:text-[10px]"
+            className="inline-flex min-h-5 shrink-0 items-center justify-center rounded-sm border border-slate-900/25 px-1 py-0.5 text-center text-[8px] font-semibold leading-tight text-white shadow-sm sm:px-1.5 sm:text-[10px]"
             style={{ background: b.color }}
           >
             {b.label}
