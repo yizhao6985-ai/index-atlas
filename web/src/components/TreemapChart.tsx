@@ -2,7 +2,7 @@ import { TreemapChart as TreemapSeries } from "echarts/charts";
 import { TooltipComponent } from "echarts/components";
 import { use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 import { colorForPctChange } from "@/lib/colors";
 import type { TreemapNode } from "@/lib/treemapBuilder";
@@ -39,6 +39,7 @@ function decorate(node: TreemapNode): Record<string, unknown> {
     value: node.value,
     itemStyle: { color: fill },
     pct: node.pctChange,
+    ...(node.swCascaderPath?.length ? { swPath: node.swCascaderPath } : {}),
   };
   if (node.children?.length) {
     return { ...base, children: node.children.map(decorate) };
@@ -63,7 +64,16 @@ function decorate(node: TreemapNode): Record<string, unknown> {
   };
 }
 
-export default function TreemapChart({ root }: { root: TreemapNode }) {
+export default function TreemapChart({
+  root,
+  onSwCascaderPathSelect,
+}: {
+  root: TreemapNode;
+  onSwCascaderPathSelect?: (path: string[]) => void;
+}) {
+  const onPathSelectRef = useRef(onSwCascaderPathSelect);
+  onPathSelectRef.current = onSwCascaderPathSelect;
+
   const option = useMemo(
     () => ({
       tooltip: {
@@ -105,12 +115,12 @@ export default function TreemapChart({ root }: { root: TreemapNode }) {
               `成分权重: ${w}`,
               ...(xq
                 ? [
-                    `<span style="opacity:.85;font-size:11px">点击方块跳转雪球</span>`,
+                    `<span style="opacity:.85;font-size:11px">点击：申万筛选至此三级并跳转雪球</span>`,
                   ]
                 : []),
             ].join("<br/>");
           }
-          return `<b>${name}</b><br/>申万路径: ${swPath || name}<br/>加权涨跌幅: ${pctStr}<br/><span style="opacity:.85;font-size:12px">（块面积为下属子项加总，配色按加权限跌幅分档）</span>`;
+          return `<b>${name}</b><br/>申万路径: ${swPath || name}<br/>加权涨跌幅: ${pctStr}<br/><span style="opacity:.85;font-size:12px">点击按此申万路径筛选；块面积为下属加总</span>`;
         },
       },
       series: [
@@ -121,8 +131,7 @@ export default function TreemapChart({ root }: { root: TreemapNode }) {
           width: "100%",
           height: "100%",
           roam: false,
-          // 叶子节点 data 上带 `link` 时跳转雪球；无 link 的父级点击无动作
-          nodeClick: "link",
+          nodeClick: false,
           breadcrumb: { show: false },
           // 有子级：顶栏行业名 — 与页面标题区一致，深底白字
           upperLabel: {
@@ -200,7 +209,26 @@ export default function TreemapChart({ root }: { root: TreemapNode }) {
     [root],
   );
 
-  const ref = useEcharts(option);
+  const ref = useEcharts(option, (chart) => {
+    const onClick = (raw: unknown) => {
+      const params = raw as {
+        data?: {
+          swPath?: string[];
+          link?: string;
+          target?: string;
+        };
+      };
+      const swPath = params.data?.swPath;
+      if (!swPath?.length) return;
+      onPathSelectRef.current?.(swPath);
+      const link = params.data?.link;
+      if (typeof link === "string" && link.length > 0) {
+        window.open(link, "_blank", "noopener,noreferrer");
+      }
+    };
+    chart.on("click", onClick);
+    return () => chart.off("click", onClick);
+  });
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col touch-pan-y">

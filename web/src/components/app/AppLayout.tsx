@@ -11,6 +11,8 @@ export default function AppLayout() {
     setIndexCode,
     metric,
     setMetric,
+    shenwanCascaderPath,
+    setShenwanCascaderPath,
     isTrading,
     indicesData,
     marketQuery,
@@ -27,6 +29,8 @@ export default function AppLayout() {
         setIndexCode={setIndexCode}
         metric={metric}
         onMetricChange={setMetric}
+        shenwanCascaderPath={shenwanCascaderPath}
+        onShenwanCascaderPathChange={setShenwanCascaderPath}
         indicesData={indicesData}
         marketSnapshot={marketQuery.data}
         isTrading={isTrading}

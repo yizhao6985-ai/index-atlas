@@ -1,5 +1,20 @@
-import { BarChartOutlined, CloseOutlined, LoadingOutlined, MenuOutlined } from "@ant-design/icons";
-import { Button, Col, Popover, Radio, Row, Select, Space, Tag } from "antd";
+import {
+  BarChartOutlined,
+  CloseOutlined,
+  LoadingOutlined,
+  MenuOutlined,
+} from "@ant-design/icons";
+import {
+  Button,
+  Cascader,
+  Col,
+  Popover,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Tag,
+} from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import UsageHelpModal from "@/components/app/UsageHelpModal";
@@ -20,6 +35,12 @@ import {
   dataAsOfDisplayFromMarketRt,
   tradeDateLabelFromMarketRt,
 } from "@/lib/marketRtSnapshot";
+import { buildShenwanTreeFromQuoteRows } from "@/lib/buildShenwanTreeFromRows";
+import {
+  shenwanCascaderDisplayText,
+  shenwanTreeToTieredRootCascaderOptions,
+  storagePathFromCascaderChange,
+} from "@/lib/shenwanCascader";
 
 const METRIC_OPTIONS: readonly (readonly [Metric, string])[] = [
   ["mcap", "自由流通市值"],
@@ -45,6 +66,8 @@ type AppHeaderProps = {
   setIndexCode: (code: string) => void;
   metric: Metric;
   onMetricChange: (m: Metric) => void;
+  shenwanCascaderPath: string[];
+  onShenwanCascaderPathChange: (path: string[]) => void;
   indicesData: IndicesResponse | undefined;
   /** `GET …/market/rt` 响应体；顶栏「交易日」「数据截至」仅读其 `tradeDate` / `dataAsOf`。 */
   marketSnapshot: MarketSnapshotResponse | undefined;
@@ -59,6 +82,8 @@ export default function AppHeader({
   setIndexCode,
   metric,
   onMetricChange,
+  shenwanCascaderPath,
+  onShenwanCascaderPathChange,
   indicesData,
   marketSnapshot,
   isTrading,
@@ -89,7 +114,10 @@ export default function AppHeader({
     };
   }, [mobileSheetOpen]);
 
-  const summary = useMemo(() => summarizeMarket(marketRows ?? []), [marketRows]);
+  const summary = useMemo(
+    () => summarizeMarket(marketRows ?? []),
+    [marketRows],
+  );
   const distTable = useMemo(() => {
     const d = summary.distribution;
     return LEGEND_BUCKETS.map((b) => ({
@@ -102,14 +130,24 @@ export default function AppHeader({
   const statsChartsPopover = useMemo(
     () => (
       <div className="p-1 sm:p-2">
-        <MarketStatsCharts layout="popover" summary={summary} distRows={distTable} />
+        <MarketStatsCharts
+          layout="popover"
+          summary={summary}
+          distRows={distTable}
+        />
       </div>
     ),
     [summary, distTable],
   );
 
   const statsChartsBlock = useMemo(
-    () => <MarketStatsCharts layout="mobile" summary={summary} distRows={distTable} />,
+    () => (
+      <MarketStatsCharts
+        layout="mobile"
+        summary={summary}
+        distRows={distTable}
+      />
+    ),
     [summary, distTable],
   );
 
@@ -158,6 +196,14 @@ export default function AppHeader({
     label,
   }));
 
+  const shenwanCascaderOptions = useMemo(
+    () =>
+      shenwanTreeToTieredRootCascaderOptions(
+        buildShenwanTreeFromQuoteRows(marketRows ?? []),
+      ),
+    [marketRows],
+  );
+
   const controlCluster = (opts: { mobile: boolean }) => (
     <div className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 p-2">
       <Row gutter={[12, 12]} align="middle" wrap>
@@ -189,9 +235,65 @@ export default function AppHeader({
             </Col>
           </Row>
         </Col>
+        <Col
+          xs={24}
+          md={7}
+          lg={6}
+          className={[
+            "min-w-0 max-w-full",
+            opts.mobile ? "" : "sm:max-w-[18rem]",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <Row gutter={[8, 0]} align="middle" wrap={false} className="min-w-0">
+            <Col flex="none">
+              <span className="shrink-0 text-xs text-slate-500">申万层级</span>
+            </Col>
+            <Col flex="auto" className="min-w-0 max-w-full">
+              <Cascader
+                size="small"
+                allowClear
+                changeOnSelect
+                className="w-full min-w-0"
+                popupClassName="min-w-[15rem] max-sm:max-h-[55dvh] max-sm:overflow-auto"
+                options={shenwanCascaderOptions}
+                value={
+                  shenwanCascaderPath.length ? shenwanCascaderPath : undefined
+                }
+                aria-label="申万：第一层全部，依次为一级二级三级"
+                placeholder="第一层：全部；依次为一级→二级→三级"
+                displayRender={() =>
+                  shenwanCascaderDisplayText(shenwanCascaderPath) ||
+                  "第一层：全部（默认）"
+                }
+                onChange={(next) =>
+                  onShenwanCascaderPathChange(
+                    storagePathFromCascaderChange(next),
+                  )
+                }
+                showSearch={{
+                  filter: (inputVal, path) =>
+                    path.some((o) => {
+                      const t = `${o.label ?? ""}`.toLowerCase();
+                      const v = `${o.value ?? ""}`.toLowerCase();
+                      const q = inputVal.trim().toLowerCase();
+                      return q === "" ? true : t.includes(q) || v.includes(q);
+                    }),
+                }}
+                disabled={!shenwanCascaderOptions.length}
+              />
+            </Col>
+          </Row>
+        </Col>
         <Col xs={24} md={12} flex="1 1 280px" className="min-w-0 max-w-full">
           {opts.mobile ? (
-            <Row gutter={[8, 0]} align="middle" wrap={false} className="min-w-0">
+            <Row
+              gutter={[8, 0]}
+              align="middle"
+              wrap={false}
+              className="min-w-0"
+            >
               <Col flex="none">
                 <span className="shrink-0 text-xs text-slate-500">面积</span>
               </Col>
@@ -207,7 +309,12 @@ export default function AppHeader({
               </Col>
             </Row>
           ) : (
-            <Row gutter={[10, 8]} align="middle" className="min-w-0 w-full" wrap>
+            <Row
+              gutter={[10, 8]}
+              align="middle"
+              className="min-w-0 w-full"
+              wrap
+            >
               <Col flex="none">
                 <span className="shrink-0 text-xs text-slate-500">面积</span>
               </Col>
@@ -239,7 +346,10 @@ export default function AppHeader({
         <Tag
           className="m-0 max-w-full text-[11px] sm:text-xs"
           color="success"
-          style={{ border: "1px solid rgb(187 247 208)", color: "rgb(22 101 52)" }}
+          style={{
+            border: "1px solid rgb(187 247 208)",
+            color: "rgb(22 101 52)",
+          }}
         >
           数据截至 {dataAsOfDisplay}
         </Tag>
@@ -251,7 +361,9 @@ export default function AppHeader({
             ? "border-emerald-600 bg-emerald-600 text-white"
             : "border-amber-500 bg-amber-500 text-white",
           isTrading && marketIsRefetching ? "ring-2 ring-white/30" : "",
-          isTrading && justUpdated && !marketIsRefetching ? "ring-2 ring-amber-100 shadow-md" : "",
+          isTrading && justUpdated && !marketIsRefetching
+            ? "ring-2 ring-amber-100 shadow-md"
+            : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -273,11 +385,11 @@ export default function AppHeader({
   );
 
   const marketStatsRow = hasRows ? (
-    <div
-      className="flex w-max max-w-none flex-nowrap items-center gap-x-2.5 rounded-md border border-slate-100 bg-slate-50/90 px-2.5 py-1.5 text-[11px] leading-none text-slate-600 ring-1 ring-slate-900/[0.04] sm:gap-x-3"
-    >
+    <div className="flex w-max max-w-none flex-nowrap items-center gap-x-2.5 rounded-md border border-slate-100 bg-slate-50/90 px-2.5 py-1.5 text-[11px] leading-none text-slate-600 ring-1 ring-slate-900/[0.04] sm:gap-x-3">
       <span className="shrink-0 whitespace-nowrap">
-        成分 <strong className="tabular-nums text-slate-900">{summary.count}</strong> 只
+        成分{" "}
+        <strong className="tabular-nums text-slate-900">{summary.count}</strong>{" "}
+        只
       </span>
       <span className="shrink-0 whitespace-nowrap">
         自由流通市值（约）{" "}
@@ -294,18 +406,25 @@ export default function AppHeader({
         亿
       </span>
       <span className="shrink-0 whitespace-nowrap">
-        等权 <strong className="tabular-nums text-slate-900">{fmtPct(summary.avgPct)}</strong>
+        等权{" "}
+        <strong className="tabular-nums text-slate-900">
+          {fmtPct(summary.avgPct)}
+        </strong>
       </span>
       <span className="inline-flex shrink-0 flex-nowrap items-center gap-x-2 sm:gap-x-2.5">
         <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap">
           涨{" "}
-          <strong className="tabular-nums text-red-600 leading-none">{summary.riseCount}</strong>
-          <span className="text-slate-400">/</span>
-          跌{" "}
-          <strong className="tabular-nums text-emerald-700 leading-none">{summary.fallCount}</strong>
-          <span className="text-slate-400">/</span>
-          平{" "}
-          <strong className="tabular-nums text-slate-800 leading-none">{summary.flatCount}</strong>
+          <strong className="tabular-nums text-red-600 leading-none">
+            {summary.riseCount}
+          </strong>
+          <span className="text-slate-400">/</span>跌{" "}
+          <strong className="tabular-nums text-emerald-700 leading-none">
+            {summary.fallCount}
+          </strong>
+          <span className="text-slate-400">/</span>平{" "}
+          <strong className="tabular-nums text-slate-800 leading-none">
+            {summary.flatCount}
+          </strong>
         </span>
         <Popover
           content={statsChartsPopover}
@@ -325,7 +444,10 @@ export default function AppHeader({
             type="button"
             className="inline-flex min-h-10 shrink-0 cursor-pointer touch-manipulation items-center gap-1 border-0 bg-transparent p-0 text-left text-[10px] font-medium whitespace-nowrap text-[#1e293b] underline decoration-dotted underline-offset-2 sm:min-h-0 sm:text-[11px] hover:text-slate-900 active:opacity-80"
           >
-            <BarChartOutlined className="shrink-0 text-[13px] sm:text-[14px]" aria-hidden />
+            <BarChartOutlined
+              className="shrink-0 text-[13px] sm:text-[14px]"
+              aria-hidden
+            />
             涨跌统计
           </button>
         </Popover>
@@ -352,14 +474,18 @@ export default function AppHeader({
           亿
         </div>
         <div className="border-t border-slate-200/70 pt-1.5">
-          等权 {fmtPct(summary.avgPct)}，涨{summary.riseCount}/跌{summary.fallCount}/平
+          等权 {fmtPct(summary.avgPct)}，涨{summary.riseCount}/跌
+          {summary.fallCount}/平
           {summary.flatCount}
         </div>
       </div>
       <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/5">
         <div className="border-b border-slate-100 bg-slate-50/80 px-3 py-2.5">
           <h3 className="m-0 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-            <BarChartOutlined className="text-base text-slate-500" aria-hidden />
+            <BarChartOutlined
+              className="text-base text-slate-500"
+              aria-hidden
+            />
             涨跌统计
           </h3>
         </div>
@@ -443,7 +569,9 @@ export default function AppHeader({
             style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-3 py-2.5 pr-1">
-              <h2 className="m-0 text-base font-semibold text-slate-900">数据与设置</h2>
+              <h2 className="m-0 text-base font-semibold text-slate-900">
+                数据与设置
+              </h2>
               <Button
                 type="text"
                 icon={<CloseOutlined />}
@@ -473,7 +601,12 @@ export default function AppHeader({
             <h1 className="m-0 text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
               A 股指数云图
             </h1>
-            <Button type="link" size="small" className="!p-0" onClick={() => setUsageHelpOpen(true)}>
+            <Button
+              type="link"
+              size="small"
+              className="!p-0"
+              onClick={() => setUsageHelpOpen(true)}
+            >
               使用说明
             </Button>
           </div>
@@ -493,7 +626,10 @@ export default function AppHeader({
         </div>
       </header>
 
-      <UsageHelpModal open={usageHelpOpen} onClose={() => setUsageHelpOpen(false)} />
+      <UsageHelpModal
+        open={usageHelpOpen}
+        onClose={() => setUsageHelpOpen(false)}
+      />
     </>
   );
 }

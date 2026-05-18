@@ -17,12 +17,18 @@ import { useIndexCatalog } from "@/hooks/useIndexCatalog";
 import { useMarketSnapshotQueryFromDeps } from "@/hooks/useMarketSnapshotQuery";
 import { useTradingSession } from "@/hooks/useTradingSession";
 import type { Metric } from "@/lib/metric";
+import { rowMatchesShenwanSelection } from "@/lib/shenwanCascader";
 
 type AppStateValue = {
   indexCode: string;
   setIndexCode: (code: string) => void;
   metric: Metric;
   setMetric: (m: Metric) => void;
+  /**
+   * 申万级联选中路径（每层为 `encodeSwPart`）；空数组表示不筛选、展示当前指数全部成分。
+   */
+  shenwanCascaderPath: string[];
+  setShenwanCascaderPath: (path: string[]) => void;
   /**
    * `/api/session` 成功后的 `continuousAuction`；未完成或失败时为 `undefined`。
    */
@@ -51,9 +57,14 @@ export function useAppState(): AppStateValue {
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [metric, setMetric] = useState<Metric>("mcap");
+  const [shenwanCascaderPath, setShenwanCascaderPath] = useState<string[]>([]);
 
   const catalog = useIndexCatalog();
   const session = useTradingSession();
+
+  useEffect(() => {
+    setShenwanCascaderPath([]);
+  }, [catalog.indexCode]);
 
   const marketQuery = useMarketSnapshotQueryFromDeps({
     indexCode: catalog.indexCode,
@@ -72,12 +83,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (!marketQuery.isError) marketAlertedRef.current = false;
   }, [marketQuery.isError]);
 
+  useEffect(() => {
+    const rows = marketQuery.data?.rows;
+    setShenwanCascaderPath((path) => {
+      if (!path.length) return path;
+      if (!rows?.length) return [];
+      const ok = rows.some((r) => rowMatchesShenwanSelection(r, path));
+      return ok ? path : [];
+    });
+  }, [marketQuery.data?.rows]);
+
   const value = useMemo(
     () => ({
       indexCode: catalog.indexCode,
       setIndexCode: catalog.setIndexCode,
       metric,
       setMetric,
+      shenwanCascaderPath,
+      setShenwanCascaderPath,
       continuousAuction: session.continuousAuction,
       isTrading: session.isTrading,
       canRequestRt: session.canRequestRt,
@@ -89,6 +112,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       catalog.setIndexCode,
       catalog.indicesData,
       metric,
+      shenwanCascaderPath,
       session.continuousAuction,
       session.isTrading,
       session.canRequestRt,
